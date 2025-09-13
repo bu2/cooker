@@ -1,0 +1,467 @@
+Soupe à l’oignon gratinée
+Soupe de poisson
+Bouillabaisse
+Bisque de homard
+Consommé
+Potage Parmentier
+Vichyssoise
+Potage Saint‑Germain
+Velouté Dubarry
+Soupe au pistou
+Garbure béarnaise
+Tourin à l’ail
+Poireaux vinaigrette
+Carottes râpées
+Céleri rémoulade
+Betteraves vinaigrette
+Salade niçoise
+Salade lyonnaise
+Salade landaise
+Salade de chèvre chaud
+Salade de gésiers
+Pissaladière
+Tarte flambée
+Quiche lorraine
+Quiche aux poireaux
+Quiche aux champignons
+Flamiche aux poireaux
+Tarte à l’oignon
+Tourte aux blettes
+Gougères
+Vol‑au‑vent
+Bouchées à la reine
+Œufs mayonnaise
+Œufs mimosa
+Œufs meurette
+Œufs en cocotte
+Terrine de campagne
+Pâté en croûte
+Pâté lorrain
+Pâté de Pâques berrichon
+Terrine de lapin
+Terrine de gibier
+Terrine de poisson
+Rillettes du Mans
+Rillettes de Tours
+Rillettes de porc
+Rillettes de canard
+Rillettes d’oie
+Rillettes de saumon
+Rillettes de thon
+Foie gras en terrine
+Foie gras mi‑cuit
+Foie gras poêlé
+Saumon Bellevue
+Aspic de volaille
+Escargots à la bourguignonne
+Bulots mayonnaise
+Crevettes mayonnaise
+Bœuf bourguignon
+Pot‑au‑feu
+Daube provençale
+Gardianne de taureau
+Langue de bœuf sauce piquante
+Joue de bœuf braisée
+Onglet à l’échalote
+Entrecôte bordelaise
+Steak au poivre
+Tournedos Rossini
+Châteaubriand sauce béarnaise
+Bœuf miroton
+Hachis Parmentier
+Parmentier de canard
+Alouettes sans tête
+Blanquette de veau
+Sauté de veau Marengo
+Jarret de veau braisé
+Rognons de veau à la moutarde
+Rognons de veau au madère
+Foie de veau à la lyonnaise
+Tête de veau sauce gribiche
+Paupiettes de veau
+Grenadins de veau aux morilles
+Petit salé aux lentilles
+Saucisse‑lentilles
+Saucisse de Toulouse au vin blanc
+Filet mignon en croûte
+Jambon braisé au madère
+Navarin d’agneau
+Gigot d’agneau
+Agneau de 7 heures
+Épaule d’agneau confite
+Côtelettes d’agneau persillées
+Coq au vin
+Poule au pot
+Poulet rôti
+Poulet basquaise
+Poulet Vallée d’Auge
+Poulet à la crème et aux morilles
+Poulet à la moutarde
+Fricassée de poulet à l’ancienne
+Poularde demi‑deuil
+Poularde au vin jaune et morilles
+Canard à l’orange
+Canard au sang à la rouennaise
+Magret de canard
+Confit de canard
+Parmentier de canard confit
+Pigeon aux petits pois
+Pintade aux choux
+Dinde aux marrons
+Civet de lièvre
+Civet de sanglier
+Civet de chevreuil
+Perdreau rôti
+Faisan à la crème
+Sole meunière
+Sole bonne femme
+Sole dieppoise
+Sole Véronique
+Sole Walewska
+Turbot sauce hollandaise
+Bar en croûte de sel
+Sandre au beurre blanc
+Brochet au beurre blanc
+Lotte à l’américaine
+Lotte à l’armoricaine
+Homard à l’américaine
+Langouste à l’armoricaine
+Matelote d’anguilles
+Brandade de morue nîmoise
+Aïoli garni
+Moules marinières
+Mouclade charentaise
+Huîtres gratinées
+Coquilles Saint‑Jacques à la crème
+Coquilles Saint‑Jacques à la normande
+Coquilles Saint‑Jacques à la bretonne
+Gratin de fruits de mer
+Bourride sétoise
+Soupe de poissons de roche
+Saumon en papillote
+Daurade en papillote
+Cabillaud à la bordelaise
+Aile de raie aux câpres
+Boudin noir aux pommes
+Tripes à la mode de Caen
+Andouillette grillée
+Andouillette sauce moutarde
+Gras‑double à la lyonnaise
+Tête de veau ravigote
+Pieds paquets
+Pieds de porc panés
+Pieds à la Sainte‑Menehould
+Museau de bœuf vinaigrette
+Cassoulet
+Choucroute garnie
+Baeckeoffe
+Tartiflette
+Croziflette
+Péla savoyarde
+Fondue savoyarde
+Boîte chaude
+Gratin de crozets
+Aligot
+Truffade
+Pounti auvergnat
+Farcement savoyard
+Coq au riesling
+Carpe à la bière
+Potée auvergnate
+Potée lorraine
+Potée savoyarde
+Kig ha farz
+Cotriade bretonne
+Écrevisses à la nage
+Piperade
+Axoa de veau
+Estofinado du Quercy
+Petits farcis niçois
+Chou farci
+Farcis niçois
+Pommes de terre sarladaises
+Pommes Anna
+Pommes dauphine
+Pommes noisette
+Pommes à la lyonnaise
+Gratin dauphinois
+Gratin savoyard
+Tian de légumes
+Ratatouille
+Tian de courgettes
+Artichauts à la barigoule
+Endives braisées
+Cèpes à la persillade
+Cassolettes d’escargots
+Galette‑saucisse
+Socca niçoise
+Pan bagnat
+Croque‑monsieur
+Croque‑madame
+Jambon‑beurre
+Quenelles de brochet sauce Nantua
+Quenelles lyonnaises gratinées
+Quenelles de volaille
+Gnocchis à la parisienne
+Ravioles du Dauphiné gratinées
+Soufflé au fromage
+Soufflé aux épinards
+Soufflé au chocolat
+Soufflé au Grand Marnier
+Omelette aux fines herbes
+Omelette aux cèpes
+Omelette norvégienne
+Purée de pommes de terre
+Purée de céleri‑rave
+Écrasé de pommes de terre
+Gratin de chou‑fleur
+Haricots verts à l’ail
+Flageolets à la française
+Gratin de blettes
+Salsifis à la crème
+Carottes Vichy
+Asperges mimosa
+Asperges sauce mousseline
+Champignons à la grecque
+Courgettes à la provençale
+Mayonnaise
+Vinaigrette
+Sauce béchamel
+Sauce velouté
+Sauce hollandaise
+Sauce béarnaise
+Sauce mousseline
+Sauce Choron
+Sauce gribiche
+Sauce rémoulade
+Sauce tartare
+Sauce ravigote
+Sauce au poivre
+Sauce poivre vert
+Sauce bordelaise
+Sauce marchand de vin
+Sauce périgueux
+Sauce périgourdine
+Sauce chasseur
+Sauce grand veneur
+Sauce suprême
+Sauce normande
+Sauce américaine
+Sauce armoricaine
+Sauce meunière
+Sauce au bleu
+Sauce roquefort
+Sauce moutarde à l’ancienne
+Sauce au camembert
+Sauce au cidre
+Sauce Soubise
+Sauce Robert
+Sauce Diable
+Sauce Bercy
+Sauce Mornay
+Beurre blanc
+Beurre nantais
+Beurre noisette
+Beurre maître d’hôtel
+Rouille
+Pistou
+Aïoli
+Baguette tradition
+Pain de campagne
+Pain d’épi
+Fougasse
+Fougasse d’Aigues‑Mortes
+Gibassier
+Pompe à l’huile
+Navettes de Marseille
+Brioche
+Brioche vendéenne
+Brioche parisienne
+Pain brioché
+Pain d’épices
+Kouglof
+Chouquettes
+Palmiers
+Sablés bretons
+Palets bretons
+Galettes bretonnes
+Tuiles aux amandes
+Langues de chat
+Madeleines
+Financiers
+Canelés
+Croissants
+Pains au chocolat
+Chaussons aux pommes
+Tarte Tatin
+Tarte aux pommes
+Tarte normande
+Tarte Bourdaloue
+Tarte au citron
+Tarte au citron meringuée
+Tarte aux fraises
+Tarte aux framboises
+Tarte aux myrtilles
+Tarte aux mirabelles
+Tarte aux quetsches
+Tarte aux abricots
+Tarte aux poires amandine
+Tarte aux noix
+Tarte aux pralines roses
+Tarte au sucre
+Flan pâtissier
+Clafoutis aux cerises
+Flognarde aux pommes
+Far breton
+Crêpes
+Crêpes Suzette
+Crêpes flambées au Grand Marnier
+Galettes de sarrasin
+Crêpes dentelle
+Kouign‑amann
+Gâteau breton
+Gâteau Basque
+Gâteau nantais
+Gâteau de Savoie
+Opéra
+Fraisier
+Dacquoise
+Marjolaine
+Mille‑feuille
+Saint‑Honoré
+Paris‑Brest
+Éclair au chocolat
+Éclair au café
+Religieuse au chocolat
+Profiteroles
+Choux à la crème
+Croquembouche
+Bûche de Noël
+Baba au rhum
+Savarin
+Puits d’amour
+Tarte Tropézienne
+Crème brûlée
+Crème caramel
+Île flottante
+Œufs à la neige
+Riz au lait
+Mousse au chocolat
+Mousse au citron
+Pots de crème à la vanille
+Bavarois aux fruits
+Charlotte aux fraises
+Charlotte aux poires
+Charlotte russe
+Charlotte royale
+Vacherin glacé
+Nougat glacé
+Mont‑Blanc aux marrons
+Pain perdu
+Brioche perdue
+Poire Belle‑Hélène
+Pêche Melba
+Poires au vin
+Croustade gasconne
+Tourtière landaise
+Pastis landais
+Merveilleux
+Bugnes lyonnaises
+Oreillettes
+Beignets aux pommes
+Canistrelli
+Fiadone
+Cervelle de canut
+Fromage fort
+Confit d’oignons
+Terrine de légumes
+Lièvre à la royale
+Salmis de pintade
+Salmis de palombe
+Lapin à la moutarde
+Lapin chasseur
+Civet de lapin
+Rillettes de maquereau
+Aïgo boulido
+Tapenade
+Anchoïade
+Panisses
+Beignets de fleurs d’acacia
+Harengs pommes à l’huile
+Veau Orloff
+Camembert rôti au four
+Gratin de cardons
+Cardons à la moelle
+Oignons farcis
+Aubergines à la bonifacienne
+Chapon farci aux marrons
+Saucisson brioché
+Quenelles de semoule
+Salsifis glacés
+Topinambours à la crème
+Poireaux fondants
+Salade de museau
+Salade de pommes de terre à la française
+Bœuf carottes
+Sauté de porc au cidre
+Lapin au cidre
+Poulet au cidre
+Saumon en croûte de sel
+Truite aux amandes
+Truite meunière
+Merlan en beignets
+Beignets de courgettes
+Courgettes farcies
+Tomates farcies
+Poivrons farcis
+Pommes boulangère
+Pâte brisée
+Pâte sablée
+Pâte sucrée
+Pâte feuilletée
+Pâte à choux
+Pâte à crêpes
+Pâte à galette de sarrasin
+Pâte à brioche
+Crème pâtissière
+Crème mousseline
+Crème diplomate
+Crème chiboust
+Crème anglaise
+Crème chantilly
+Ganache au chocolat
+Compote de pommes
+Confiture de fraises
+Confiture d’abricots
+Gelée de groseilles
+Pâte de fruits
+Chocolat chaud à l’ancienne
+Coquilles Saint‑Jacques poêlées
+Endives au jambon gratinées
+Cordon bleu de veau
+Bœuf braisé aux carottes
+Paupiettes de poisson
+Rougets à la provençale
+Cèpes à la bordelaise
+Rillettes de sardines
+Tielle sétoise
+Encornets farcis à la sétoise
+Marrons glacés
+Bœuf à la ficelle
+Chapon au vin jaune
+Cailles aux raisins
+Quiche au saumon
+Quiche au thon
+Velouté de potimarron
+Velouté de châtaignes
+Tourteau fromager
+Pruneaux à l’Armagnac
+Noisettes d’agneau aux herbes
+Côte de veau aux morilles
+Andouille de Vire grillée
+Chaudrée charentaise
+Matelote de poissons
+Riste d’aubergines
+Fricandeau de veau
+Daube de poulpe
+Lentilles du Puy au lard
