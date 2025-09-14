@@ -21,16 +21,17 @@ def hash_title(title: str) -> str:
 
 def build_prompt(title: str) -> str:
     return (
-        "You are a skilled French chef. Write a complete, high-quality recipe for the dish titled '"
+        "Tu es un chef cuisinier français. Rédige une recette complète et de haute qualité pour le plat intitulé ‘"
         + title
-        + "'.\n"
-        "Requirements:\n"
-        "- Start with a one-sentence description.\n"
-        "- Provide clear sections: Ingredients and Steps.\n"
-        "- Give realistic quantities and measurements.\n"
-        "- Include prep time, cook time, and servings.\n"
-        "- Use concise, precise instructions.\n"
-        "Output plain text only (no markdown)."
+        + "’.\n"
+        "Exigences :\n"
+        "- Commence par une phrase de description.\n"
+        "- Fournis des sections claires : Ingrédients et Étapes.\n"
+        "- Indique des quantités réalistes (unités métriques).\n"
+        "- Ajoute le temps de préparation, le temps de cuisson et le nombre de portions.\n"
+        "- Donne des instructions concises et précises.\n"
+        "- Réponds en texte brut uniquement (sans Markdown).\n"
+        "- Écris en français."
     )
 
 
@@ -68,6 +69,7 @@ def main():
             continue
 
         print(f"[{idx}/{total}] Generating: {title}")
+        start = time.perf_counter()
         try:
             text = generate_recipe_text(model, title)
             if not text:
@@ -78,11 +80,14 @@ def main():
             data = {"title": title, "text": text}
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+            elapsed = time.perf_counter() - start
+            print(f"   Saved to {out_path} in {elapsed:.2f}s")
         except KeyboardInterrupt:
             print("Interrupted by user. Exiting…")
             sys.exit(1)
         except Exception as e:
-            print(f"   Error generating '{title}': {e}")
+            elapsed = time.perf_counter() - start
+            print(f"   Error generating '{title}' after {elapsed:.2f}s: {e}")
             continue
 
         # Gentle pacing so we don't hammer the local model
