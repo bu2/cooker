@@ -13,7 +13,7 @@ What it does
 
 Usage
   pip install lancedb pandas pyarrow
-  python index_lancedb.py --parquet recipes.parquet --db ./recipes.db --table recipes --overwrite
+  python index_recipes.py --parquet recipes.parquet --db ./recipes.db --table recipes --overwrite
 
 Notes
 - HNSW and FTS APIs can differ between lancedb versions; this script tries
