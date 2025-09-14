@@ -4,7 +4,7 @@ using sentence-transformers.
 
 Usage examples:
   python embed_recipes.py
-  python embed_recipes.py --input-dir generated_recipes --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  python embed_recipes.py --input-dir json_recipes --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
   python embed_recipes.py --output embedded_recipes.pkl
 
 Notes:
@@ -95,7 +95,7 @@ def main():
     _require_deps()
 
     parser = argparse.ArgumentParser(description="Load recipe JSON and embed text with sentence-transformers.")
-    parser.add_argument("--input-dir", default="generated_recipes", type=str, help="Directory containing recipe JSON files")
+    parser.add_argument("--input-dir", default="json_recipes", type=str, help="Directory containing recipe JSON files")
     parser.add_argument(
         "--model",
         default="Snowflake/snowflake-arctic-embed-l-v2.0",

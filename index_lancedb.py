@@ -13,7 +13,7 @@ What it does
 
 Usage
   pip install lancedb pandas pyarrow
-  python index_lancedb.py --parquet recipes.parquet --db ./lancedb_recipes --table recipes --overwrite
+  python index_lancedb.py --parquet recipes.parquet --db ./recipes.db --table recipes --overwrite
 
 Notes
 - HNSW and FTS APIs can differ between lancedb versions; this script tries
@@ -173,7 +173,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Index recipes in LanceDB from a Parquet file")
     parser.add_argument("--parquet", required=True, help="Path to recipes.parquet with 'embedding' column")
-    parser.add_argument("--db", default="./lancedb_recipes", help="Directory to store LanceDB database")
+    parser.add_argument("--db", default="./recipes.db", help="Directory to store LanceDB database")
     parser.add_argument("--table", default="recipes", help="LanceDB table name")
     parser.add_argument("--metric", default="cosine", choices=["cosine", "l2", "dot"], help="Vector metric")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing table if present")

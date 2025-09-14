@@ -1,3 +1,3 @@
-generated_recipes/
-lancedb_recipes/
+json_recipes/
+recipes.db/
 recipes.parquet

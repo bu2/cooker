@@ -52,12 +52,12 @@ def generate_recipe_text(model: str, title: str) -> str:
 
 def main():
     model = os.environ.get("OLLAMA_MODEL", CHEF_LLM)
-    output_dir = os.environ.get("OUTPUT_DIR", "generated_recipes")
+    output_dir = os.environ.get("OUTPUT_DIR", "json_recipes")
     os.makedirs(output_dir, exist_ok=True)
 
     with open('recipes.txt', encoding='utf-8') as f:
         recipes = [l.strip() for l in f if l.strip()]
-    print(f"{len(recipes)} recipes to generate using model '{model}'…")
+    print(f"{len(recipes)} recipes to generate using model '{model}' → {output_dir}")
 
     total = len(recipes)
     for idx, title in enumerate(recipes, start=1):
