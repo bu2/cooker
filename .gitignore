@@ -1,3 +1,6 @@
 json_recipes/
 recipes.db/
+
+projector_metadata.tsv
+projector_vectors.tsv
 recipes.parquet
