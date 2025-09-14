@@ -8,7 +8,7 @@ Usage examples:
   python embed_recipes.py --output embedded_recipes.pkl
 
 Notes:
-- Install dependencies: pip install pandas sentence-transformers
+- Install dependencies: pip install pandas sentence-transformers tiktoken
 - The first model load may download weights (requires network).
 """
 
@@ -32,6 +32,14 @@ def _require_deps():
     except Exception:
         print(
             "Error: sentence-transformers is required. Install with: pip install sentence-transformers",
+            file=sys.stderr,
+        )
+        raise
+    try:
+        import tiktoken  # noqa: F401
+    except Exception:
+        print(
+            "Error: tiktoken is required for token counting. Install with: pip install tiktoken",
             file=sys.stderr,
         )
         raise
@@ -94,7 +102,7 @@ def embed_texts(df: "pd.DataFrame", model_name: str, batch_size: int = 32, norma
 def main():
     _require_deps()
 
-    parser = argparse.ArgumentParser(description="Load recipe JSON and embed text with sentence-transformers.")
+    parser = argparse.ArgumentParser(description="Load recipe JSON, count tokens, and embed text with sentence-transformers.")
     parser.add_argument("--input-dir", default="json_recipes", type=str, help="Directory containing recipe JSON files")
     parser.add_argument(
         "--model",
@@ -107,6 +115,12 @@ def main():
         "--no-normalize",
         action="store_true",
         help="Disable embedding normalization (L2)",
+    )
+    parser.add_argument(
+        "--token-encoding",
+        default="cl100k_base",
+        type=str,
+        help="tiktoken encoding to use for token counting (e.g., cl100k_base, o200k_base)",
     )
     parser.add_argument(
         "--output",
@@ -128,7 +142,34 @@ def main():
         print("No recipes found to embed.")
         sys.exit(0)
 
-    print(f"Loaded {len(df)} recipes. Embedding with model: {args.model}")
+    # Count tokens per recipe text using tiktoken
+    import tiktoken
+    try:
+        enc = tiktoken.get_encoding(args.token_encoding)
+    except Exception:
+        try:
+            # Fallback: allow passing a model name
+            enc = tiktoken.encoding_for_model(args.token_encoding)
+        except Exception as e:
+            print(f"Failed to initialize tiktoken encoding '{args.token_encoding}': {e}", file=sys.stderr)
+            raise
+
+    def _count_tokens(text: str) -> int:
+        if not isinstance(text, str):
+            return 0
+        try:
+            return len(enc.encode(text))
+        except Exception:
+            return 0
+
+    df["n_tokens"] = df["text"].apply(_count_tokens)
+    total_tokens = int(df["n_tokens"].sum())
+    avg_tokens = float(total_tokens) / max(1, len(df))
+
+    print(
+        f"Loaded {len(df)} recipes. Total tokens: {total_tokens} (avg {avg_tokens:.1f}/recipe) using encoding '{args.token_encoding}'."
+    )
+    print(f"Embedding with model: {args.model}")
     df_emb = embed_texts(df, model_name=args.model, batch_size=args.batch_size, normalize=not args.no_normalize)
 
     # Report embedding dimensionality
