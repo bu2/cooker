@@ -1,6 +1,8 @@
+images/
 json_recipes/
 recipes.db/
 
+.DS_Store
 projector_metadata.tsv
 projector_vectors.tsv
 recipes.parquet
