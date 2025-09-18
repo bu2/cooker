@@ -37,6 +37,24 @@
 
 Note: Use `dot` when your embeddings are unit‑normalized (Step 2 normalizes by default unless you pass `--no-normalize`). If not normalized, prefer `cosine` or `l2`.
 
+**Recipe Gallery Web App**
+- Backend (FastAPI):
+  - Install deps: `pip install -r gallery_backend/requirements.txt`
+  - Optional env vars:
+    - `RECIPES_PARQUET` (default `recipes.parquet`)
+    - `RECIPES_LANCEDB` (default `recipes.db`)
+    - `RECIPES_TABLE` (default `recipes`)
+    - `RECIPES_IMAGES` (default `recipe_images`) for generated pictures
+  - Run locally: `uvicorn gallery_backend.main:app --reload`
+  - Static images served at `/images/<recipe-id>.png` if files exist.
+- Frontend (Vite + React):
+  - `cd gallery_frontend`
+  - `npm install`
+  - Start dev server: `npm run dev` (default http://localhost:5173)
+  - Configure backend URL via `.env` (e.g., `VITE_API_BASE_URL=http://localhost:8000`).
+- Features: list recipes, search via LanceDB full-text index, view full recipe & image in modal.
+- Build for production: `npm run build` → static assets in `gallery_frontend/dist/`.
+
 **Files**
 - `recipes.txt`: One recipe title per line.
 - `json_recipes/`: Generated JSON recipes from Step 1.
