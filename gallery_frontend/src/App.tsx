@@ -123,6 +123,18 @@ function App() {
 
   const clearSelection = () => setSelected(null);
 
+  useEffect(() => {
+    if (!selected) {
+      return;
+    }
+    const { style } = document.body;
+    const previousOverflow = style.overflow;
+    style.overflow = "hidden";
+    return () => {
+      style.overflow = previousOverflow;
+    };
+  }, [selected]);
+
   return (
     <div className="app">
       <header className="app__header">
