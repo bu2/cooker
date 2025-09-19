@@ -1,5 +1,5 @@
-gallery_backend/__pycache__/
-gallery_frontend/node_modules/
+backend/__pycache__/
+frontend/node_modules/
 images/
 json_recipes/
 recipes.db/
