@@ -1,5 +1,5 @@
 **Quickstart**
-- Step 1: Generate recipe texts with `generate_recipes.py`.
+- Step 1: Generate recipe texts with `generate_recipes.*.py`.
 - Step 2: Create embeddings with `embed_recipes.py`.
 - Step 3: Index into LanceDB with `index_recipes.py`.
 
@@ -10,7 +10,7 @@
 
 **Step 1 — Generate**
 - Purpose: Create JSON files in `json_recipes/` from titles in `recipes.txt` using an Ollama chat model.
-- Command: `python generate_recipes.py`
+- Command: `python generate_recipes.ollama.py`
 - Environment options:
   - `OLLAMA_MODEL` to choose the Ollama model (default `mistral-small`). Example: ``export OLLAMA_MODEL=mistral``
   - `OUTPUT_DIR` to change output directory (default `json_recipes`).
