@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import {
   Recipe,
   RecipeList,
@@ -15,6 +15,249 @@ function truncate(text: string, length = 160): string {
 }
 
 const PLACEHOLDER_COLORS = ["#f97316", "#2dd4bf", "#38bdf8", "#a855f7", "#facc15"];
+
+function renderInline(text: string): ReactNode[] {
+  const segments: ReactNode[] = [];
+  const pattern = /(`([^`]+)`)|(\*\*([^*]+)\*\*)|(__([^_]+)__)|(\*([^*]+)\*)|(_([^_]+)_)|(\[([^\]]+)\]\(([^)]+)\))/g;
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push(text.slice(lastIndex, match.index));
+    }
+
+    if (match[1]) {
+      segments.push(
+        <code key={`inline-code-${key++}`} className="markdown__inline-code">
+          {match[2]}
+        </code>
+      );
+    } else if (match[3]) {
+      segments.push(
+        <strong key={`bold-${key++}`}>{match[4]}</strong>
+      );
+    } else if (match[5]) {
+      segments.push(
+        <strong key={`bold-${key++}`}>{match[6]}</strong>
+      );
+    } else if (match[7]) {
+      segments.push(
+        <em key={`italic-${key++}`}>{match[8]}</em>
+      );
+    } else if (match[9]) {
+      segments.push(
+        <em key={`italic-${key++}`}>{match[10]}</em>
+      );
+    } else if (match[11]) {
+      const label = match[12];
+      const href = match[13];
+      const isSafeLink = /^https?:\/\//i.test(href);
+      if (isSafeLink) {
+        segments.push(
+          <a key={`link-${key++}`} href={href} target="_blank" rel="noreferrer">
+            {label}
+          </a>
+        );
+      } else {
+        segments.push(label);
+      }
+    }
+
+    lastIndex = pattern.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push(text.slice(lastIndex));
+  }
+
+  return segments.length > 0 ? segments : [text];
+}
+
+function headingElement(level: number, key: string, children: ReactNode) {
+  switch (level) {
+    case 1:
+      return (
+        <h1 key={key} className="markdown__heading markdown__heading--h1">
+          {children}
+        </h1>
+      );
+    case 2:
+      return (
+        <h2 key={key} className="markdown__heading markdown__heading--h2">
+          {children}
+        </h2>
+      );
+    case 3:
+      return (
+        <h3 key={key} className="markdown__heading markdown__heading--h3">
+          {children}
+        </h3>
+      );
+    case 4:
+      return (
+        <h4 key={key} className="markdown__heading markdown__heading--h4">
+          {children}
+        </h4>
+      );
+    case 5:
+      return (
+        <h5 key={key} className="markdown__heading markdown__heading--h5">
+          {children}
+        </h5>
+      );
+    default:
+      return (
+        <h6 key={key} className="markdown__heading markdown__heading--h6">
+          {children}
+        </h6>
+      );
+  }
+}
+
+function parseMarkdown(markdown: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  let paragraph: string[] = [];
+  let listItems: string[] = [];
+  let listType: "ul" | "ol" | null = null;
+  let codeBlock: string[] | null = null;
+  let blockKey = 0;
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    const text = paragraph.join("\n").trim();
+    if (text) {
+      nodes.push(
+        <p key={`paragraph-${blockKey++}`} className="markdown__paragraph">
+          {renderInline(text)}
+        </p>
+      );
+    }
+    paragraph = [];
+  };
+
+  const flushList = () => {
+    if (!listItems.length || !listType) return;
+    const keyBase = blockKey++;
+    const items = listItems.map((item, index) => (
+      <li key={`list-${keyBase}-item-${index}`}>{renderInline(item)}</li>
+    ));
+    nodes.push(
+      listType === "ul" ? (
+        <ul key={`list-${keyBase}`} className="markdown__list">
+          {items}
+        </ul>
+      ) : (
+        <ol key={`list-${keyBase}`} className="markdown__list markdown__list--ordered">
+          {items}
+        </ol>
+      )
+    );
+    listItems = [];
+    listType = null;
+  };
+
+  const flushCode = () => {
+    if (!codeBlock) return;
+    nodes.push(
+      <pre key={`code-${blockKey++}`} className="markdown__code-block">
+        <code>{codeBlock.join("\n").replace(/\n$/, "")}</code>
+      </pre>
+    );
+    codeBlock = null;
+  };
+
+  for (const rawLine of lines) {
+    const trimmedLine = rawLine.replace(/\s+$/g, "");
+
+    if (codeBlock) {
+      if (/^```/.test(trimmedLine)) {
+        flushCode();
+      } else {
+        codeBlock.push(rawLine);
+      }
+      continue;
+    }
+
+    if (/^```/.test(trimmedLine)) {
+      flushParagraph();
+      flushList();
+      codeBlock = [];
+      continue;
+    }
+
+    if (!trimmedLine.trim()) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const headingMatch = trimmedLine.match(/^(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      flushParagraph();
+      flushList();
+      const level = headingMatch[1].length;
+      const text = headingMatch[2].trim();
+      nodes.push(headingElement(Math.min(level, 6), `heading-${blockKey++}`, renderInline(text)));
+      continue;
+    }
+
+    const blockquoteMatch = trimmedLine.match(/^>\s?(.*)$/);
+    if (blockquoteMatch) {
+      flushParagraph();
+      flushList();
+      nodes.push(
+        <blockquote key={`blockquote-${blockKey++}`} className="markdown__blockquote">
+          {renderInline(blockquoteMatch[1].trim())}
+        </blockquote>
+      );
+      continue;
+    }
+
+    const unorderedMatch = trimmedLine.match(/^[-*+]\s+(.*)$/);
+    if (unorderedMatch) {
+      flushParagraph();
+      if (listType && listType !== "ul") {
+        flushList();
+      }
+      listType = "ul";
+      listItems.push(unorderedMatch[1].trim());
+      continue;
+    }
+
+    const orderedMatch = trimmedLine.match(/^(\d+)[.)]\s+(.*)$/);
+    if (orderedMatch) {
+      flushParagraph();
+      if (listType && listType !== "ol") {
+        flushList();
+      }
+      listType = "ol";
+      listItems.push(orderedMatch[2].trim());
+      continue;
+    }
+
+    paragraph.push(trimmedLine);
+  }
+
+  if (codeBlock) {
+    flushCode();
+  }
+  flushParagraph();
+  flushList();
+
+  return nodes.length ? nodes : [
+    <p key="paragraph-0" className="markdown__paragraph">
+      {renderInline(markdown)}
+    </p>
+  ];
+}
+
+function MarkdownContent({ text }: { text: string }) {
+  const nodes = useMemo(() => parseMarkdown(text), [text]);
+  return <div className="modal__markdown">{nodes}</div>;
+}
 
 function RecipeCard({ recipe, onSelect }: { recipe: Recipe; onSelect: (id: string) => void }) {
   const imageUrl = buildImageUrl(recipe.image_url);
@@ -35,6 +278,9 @@ function RecipeCard({ recipe, onSelect }: { recipe: Recipe; onSelect: (id: strin
       <div className="card__body">
         <h3>{recipe.title || recipe.id}</h3>
         <p>{truncate(recipe.description ?? recipe.text)}</p>
+        {recipe.n_tokens != null && (
+          <span className="card__meta">Tokens: {recipe.n_tokens.toLocaleString()}</span>
+        )}
       </div>
     </article>
   );
@@ -50,11 +296,14 @@ function RecipeModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
         </button>
         <header>
           <h2>{recipe.title || recipe.id}</h2>
+          {recipe.n_tokens != null && (
+            <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>
+          )}
         </header>
         {imageUrl && (
           <img src={imageUrl} alt={recipe.title ?? recipe.id} className="modal__image" />
         )}
-        <pre className="modal__text">{recipe.text}</pre>
+        <MarkdownContent text={recipe.text} />
       </div>
     </div>
   );

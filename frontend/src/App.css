@@ -191,12 +191,102 @@
   object-fit: cover;
 }
 
-.modal__text {
-  white-space: pre-wrap;
-  margin: 0;
-  font-family: "Inter", sans-serif;
+.modal__markdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  font-size: 0.95rem;
   color: #1f2933;
-  line-height: 1.6;
+  line-height: 1.65;
+}
+
+.markdown__paragraph {
+  margin: 0;
+}
+
+.markdown__heading {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.markdown__heading--h1 {
+  font-size: 1.75rem;
+}
+
+.markdown__heading--h2 {
+  font-size: 1.45rem;
+}
+
+.markdown__heading--h3 {
+  font-size: 1.2rem;
+}
+
+.markdown__heading--h4 {
+  font-size: 1.05rem;
+}
+
+.markdown__heading--h5,
+.markdown__heading--h6 {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.markdown__list {
+  margin: 0;
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #334155;
+}
+
+.markdown__list--ordered {
+  list-style: decimal;
+}
+
+.markdown__code-block {
+  margin: 0;
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 0.85rem;
+  padding: 1rem;
+  font-size: 0.9rem;
+  overflow-x: auto;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.15);
+}
+
+.markdown__code-block code {
+  font-family: "Menlo", "Monaco", "Consolas", monospace;
+  white-space: pre;
+}
+
+.markdown__inline-code {
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 0.35rem;
+  padding: 0.1rem 0.35rem;
+  font-family: "Menlo", "Monaco", "Consolas", monospace;
+  font-size: 0.85em;
+}
+
+.markdown__blockquote {
+  margin: 0;
+  padding-left: 1rem;
+  border-left: 3px solid rgba(99, 102, 241, 0.35);
+  color: #475569;
+  font-style: italic;
+}
+
+.modal__markdown a {
+  color: #6366f1;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.modal__markdown a:hover {
+  text-decoration: underline;
 }
 
 .modal__tokens {
