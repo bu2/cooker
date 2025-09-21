@@ -5,7 +5,6 @@ using sentence-transformers.
 Usage examples:
   python embed_recipes.py
   python embed_recipes.py --input-dir json_recipes --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-  python embed_recipes.py --output embedded_recipes.pkl
 
 Notes:
 - Install dependencies: pip install pandas sentence-transformers tiktoken
@@ -59,6 +58,7 @@ def load_recipes(input_dir: Path) -> "pd.DataFrame":
             continue
 
         title = (data.get("title") or "").strip()
+        description = (data.get("description") or "").strip()
         text = (data.get("text") or "").strip()
         if not text:
             print(f"Skipping empty text in {p}")
@@ -67,12 +67,13 @@ def load_recipes(input_dir: Path) -> "pd.DataFrame":
         records.append({
             "id": p.stem,
             "title": title,
+            "description": description,
             "text": text,
             "path": str(p),
         })
 
     if not records:
-        return pd.DataFrame(columns=["id", "title", "text", "path"])  # empty
+        return pd.DataFrame(columns=["id", "title", "description", "text", "path"])  # empty
 
     df = pd.DataFrame.from_records(records)
     # Drop duplicate ids or texts if any
@@ -122,12 +123,6 @@ def main():
         type=str,
         help="tiktoken encoding to use for token counting (e.g., cl100k_base, o200k_base)",
     )
-    parser.add_argument(
-        "--output",
-        default=None,
-        type=str,
-        help="Optional path to save DataFrame (pickle .pkl). If omitted, no file is saved.",
-    )
 
     args = parser.parse_args()
 
@@ -176,14 +171,6 @@ def main():
     first_vec = df_emb["embedding"].iloc[0]
     dim = len(first_vec) if isinstance(first_vec, list) else None
     print(f"Embeddings created. Dimension: {dim}. DataFrame shape: {df_emb.shape}")
-
-    if args.output:
-        out_path = Path(args.output)
-        try:
-            df_emb.to_pickle(out_path)
-            print(f"Saved DataFrame with embeddings to: {out_path}")
-        except Exception as e:
-            print(f"Failed to save DataFrame to {out_path}: {e}", file=sys.stderr)
 
     df_emb.to_parquet('recipes.parquet')
     print('Results saved to recipes.parquet.')

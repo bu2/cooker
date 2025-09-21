@@ -23,7 +23,6 @@
   - `--input-dir json_recipes` to read a different folder.
   - `--model Snowflake/snowflake-arctic-embed-l-v2.0` to pick the SentenceTransformers model.
   - `--batch-size 32` and `--no-normalize` to tune embedding.
-  - `--output embedded_recipes.pkl` to also save a pickle of the DataFrame.
 - Output: Writes a Parquet dataset `recipes.parquet` containing `id`, `title`, `text`, `path`, `embedding`.
 - Note: The first model load may download weights (requires network).
 
