@@ -64,6 +64,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     recipes = pd.read_csv('recipes.csv')
+    recipes['description'] = [d[:-1] if d.endswith('.') else d for d in recipes['description']]
 
     total = len(recipes)
     for i in range(total):
