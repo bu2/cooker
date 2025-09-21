@@ -28,8 +28,8 @@ DEFAULT_IMAGES_DIR = os.environ.get("RECIPES_IMAGES", "images")
 class Recipe(BaseModel):
     id: str
     title: Optional[str] = None
+    description: Optional[str] = None
     text: str
-    n_tokens: Optional[int] = None
     image_url: Optional[str] = None
 
 
@@ -63,7 +63,7 @@ class RecipeStore:
         self.df = self.df.drop_duplicates(subset=["id"]).reset_index(drop=True)
 
         # Keep only relevant columns to avoid large payloads
-        wanted = [c for c in ["id", "title", "text", "n_tokens", "path"] if c in self.df.columns]
+        wanted = [c for c in ["id", "title", "description", "text", "path"] if c in self.df.columns]
         self.df = self.df[wanted]
 
         self.images_dir = images_dir

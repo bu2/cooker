@@ -1,6 +1,7 @@
 export interface Recipe {
   id: string;
   title?: string | null;
+  description?: string | null;
   text: string;
   n_tokens?: number | null;
   image_url?: string | null;

@@ -34,10 +34,7 @@ function RecipeCard({ recipe, onSelect }: { recipe: Recipe; onSelect: (id: strin
       )}
       <div className="card__body">
         <h3>{recipe.title || recipe.id}</h3>
-        <p>{truncate(recipe.text)}</p>
-        {recipe.n_tokens != null && (
-          <span className="card__meta">Tokens: {recipe.n_tokens.toLocaleString()}</span>
-        )}
+        <p>{truncate(recipe.description ?? recipe.text)}</p>
       </div>
     </article>
   );
@@ -53,7 +50,6 @@ function RecipeModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
         </button>
         <header>
           <h2>{recipe.title || recipe.id}</h2>
-          {recipe.n_tokens != null && <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>}
         </header>
         {imageUrl && (
           <img src={imageUrl} alt={recipe.title ?? recipe.id} className="modal__image" />

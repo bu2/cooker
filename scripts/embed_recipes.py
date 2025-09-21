@@ -159,8 +159,8 @@ def main():
         except Exception:
             return 0
 
-    df["n_tokens"] = df["text"].apply(_count_tokens)
-    total_tokens = int(df["n_tokens"].sum())
+    n_tokens = df["text"].apply(_count_tokens)
+    total_tokens = int(n_tokens.sum())
     avg_tokens = float(total_tokens) / max(1, len(df))
 
     print(

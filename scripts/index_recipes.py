@@ -173,7 +173,7 @@ def main():
     import lancedb
 
     parser = argparse.ArgumentParser(description="Index recipes in LanceDB from a Parquet file")
-    parser.add_argument("--parquet", required=True, help="Path to recipes.parquet with 'embedding' column")
+    parser.add_argument("--parquet", default='recipes.parquet', help="Path to recipes.parquet with 'embedding' column")
     parser.add_argument("--db", default="./recipes.db", help="Directory to store LanceDB database")
     parser.add_argument("--table", default="recipes", help="LanceDB table name")
     parser.add_argument(
