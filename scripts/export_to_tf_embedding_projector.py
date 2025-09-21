@@ -6,7 +6,7 @@ Outputs
 - Metadata TSV: first row is a header; first column is the title by default.
 
 Usage
-  python export_to_tf_embedding_projector.py \
+  python scripts/export_to_tf_embedding_projector.py \
       --parquet recipes.parquet \
       --vectors-tsv projector_vectors.tsv \
       --metadata-tsv projector_metadata.tsv \
@@ -154,4 +154,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

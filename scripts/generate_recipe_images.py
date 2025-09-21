@@ -14,10 +14,10 @@ Notes
   fall back to concurrent requests even if --use-batch is provided.
 
 Usage examples
-  python generate_recipe_images.py
-  python generate_recipe_images.py --parquet recipes.parquet --images-dir recipe_images
-  python generate_recipe_images.py --json-dir json_recipes --overwrite
-  python generate_recipe_images.py --concurrency 4 --size 512x512
+  python scripts/generate_recipe_images.py
+  python scripts/generate_recipe_images.py --parquet recipes.parquet --images-dir recipe_images
+  python scripts/generate_recipe_images.py --json-dir json_recipes --overwrite
+  python scripts/generate_recipe_images.py --concurrency 4 --size 512x512
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 **Quickstart**
-- Step 1: Generate recipe texts with `generate_recipes.*.py`.
-- Step 2: Create embeddings with `embed_recipes.py`.
-- Step 3: Index into LanceDB with `index_recipes.py`.
+- Step 1: Generate recipe texts with `scripts/generate_recipes.*.py`.
+- Step 2: Create embeddings with `scripts/embed_recipes.py`.
+- Step 3: Index into LanceDB with `scripts/index_recipes.py`.
 
 **Prerequisites**
 - Python 3 and `pip` installed.
@@ -10,7 +10,7 @@
 
 **Step 1 — Generate**
 - Purpose: Create JSON files in `json_recipes/` from titles in `recipes.txt` using an Ollama chat model.
-- Command: `python generate_recipes.ollama.py`
+- Command: `python scripts/generate_recipes.ollama.py`
 - Environment options:
   - `OLLAMA_MODEL` to choose the Ollama model (default `mistral-small`). Example: ``export OLLAMA_MODEL=mistral``
   - `OUTPUT_DIR` to change output directory (default `json_recipes`).
@@ -18,7 +18,7 @@
 
 **Step 2 — Embed**
 - Purpose: Load JSON recipes and generate vector embeddings.
-- Command: `python embed_recipes.py`
+- Command: `python scripts/embed_recipes.py`
 - Useful options:
   - `--input-dir json_recipes` to read a different folder.
   - `--model Snowflake/snowflake-arctic-embed-l-v2.0` to pick the SentenceTransformers model.
@@ -28,7 +28,7 @@
 
 **Step 3 — Index**
 - Purpose: Build a LanceDB database with vector and full‑text indexes.
-- Command: `python index_recipes.py --parquet recipes.parquet --db ./recipes.db --table recipes --overwrite`
+- Command: `python scripts/index_recipes.py --parquet recipes.parquet --db ./recipes.db --table recipes --overwrite`
 - Options:
   - `--metric` for vector distance (`cosine`|`l2`|`dot`). Default is `dot`.
   - Omit `--overwrite` to keep an existing table.

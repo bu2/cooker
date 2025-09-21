@@ -3,8 +3,8 @@ Load generated recipe JSON files into a Pandas DataFrame and add text embeddings
 using sentence-transformers.
 
 Usage examples:
-  python embed_recipes.py
-  python embed_recipes.py --input-dir json_recipes --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  python scripts/embed_recipes.py
+  python scripts/embed_recipes.py --input-dir json_recipes --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
 Notes:
 - Install dependencies: pip install pandas sentence-transformers tiktoken
@@ -16,8 +16,9 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+import re
 import sys
+from typing import List, Dict, Any
 
 
 def _require_deps():
@@ -60,6 +61,7 @@ def load_recipes(input_dir: Path) -> "pd.DataFrame":
         title = (data.get("title") or "").strip()
         description = (data.get("description") or "").strip()
         text = (data.get("text") or "").strip()
+        text = re.sub(r"^```markdown\n|\n```$", "", text)
         if not text:
             print(f"Skipping empty text in {p}")
             continue
