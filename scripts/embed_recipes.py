@@ -83,7 +83,7 @@ def load_recipes(input_dir: Path) -> "pd.DataFrame":
     return df
 
 
-def embed_texts(df: "pd.DataFrame", model_name: str, batch_size: int = 32, normalize: bool = True) -> "pd.DataFrame":
+def embed_texts(df: "pd.DataFrame", model_name: str, batch_size: int = 32, normalize: bool = False) -> "pd.DataFrame":
     from sentence_transformers import SentenceTransformer
 
     model = SentenceTransformer(model_name)
@@ -115,9 +115,9 @@ def main():
     )
     parser.add_argument("--batch-size", default=32, type=int, help="Batch size for embedding")
     parser.add_argument(
-        "--no-normalize",
+        "--normalize",
         action="store_true",
-        help="Disable embedding normalization (L2)",
+        help="Enable embedding normalization (L2)",
     )
     parser.add_argument(
         "--token-encoding",
@@ -167,7 +167,7 @@ def main():
         f"Loaded {len(df)} recipes. Total tokens: {total_tokens} (avg {avg_tokens:.1f}/recipe) using encoding '{args.token_encoding}'."
     )
     print(f"Embedding with model: {args.model}")
-    df_emb = embed_texts(df, model_name=args.model, batch_size=args.batch_size, normalize=not args.no_normalize)
+    df_emb = embed_texts(df, model_name=args.model, batch_size=args.batch_size, normalize=args.normalize)
 
     # Report embedding dimensionality
     first_vec = df_emb["embedding"].iloc[0]
