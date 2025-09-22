@@ -18,8 +18,7 @@ Usage
 Notes
 - HNSW and FTS APIs can differ between lancedb versions; this script tries
   the most common signatures and degrades gracefully with warnings.
- - Default vector metric is "dot". Use dot-product if your embeddings are
-   unit-normalized (Step 2 normalizes by default), otherwise choose "cosine" or "l2" explicitly.
+- Default vector metric is "cosine". Choose "dot" only when embeddings are unit-normalized.
 """
 
 from __future__ import annotations
@@ -178,9 +177,9 @@ def main():
     parser.add_argument("--table", default="recipes", help="LanceDB table name")
     parser.add_argument(
         "--metric",
-        default="dot",
+        default="cosine",
         choices=["cosine", "l2", "dot"],
-        help="Vector metric (default: dot). Use 'dot' for unit-normalized embeddings; otherwise choose 'cosine' or 'l2'.",
+        help="Vector metric (default: cosine). Use 'dot' only if embeddings are unit-normalized.",
     )
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing table if present")
 
