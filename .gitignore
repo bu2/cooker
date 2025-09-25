@@ -3,6 +3,7 @@ frontend/node_modules/
 images/
 json_recipes/
 recipes.db/
+translated_recipes/
 
 .DS_Store
 images*.tar.gz
