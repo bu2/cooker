@@ -125,29 +125,26 @@ def main():
         except Exception:
             pass
 
-    print(f"Creating table '{args.table}' (mode={mode})…")
+    print(f"Creating table '{args.table}' (mode={mode})...")
     tbl = db.create_table(args.table, data=df, mode="overwrite" if args.overwrite else "create")
 
-    print("Building IVF_FLAT vector index on 'embedding'…")
+    print("Building IVF_FLAT vector index on 'embedding'...")
     tbl.create_index(
         vector_column_name="embedding",
         index_type="IVF_FLAT",
         metric=args.metric,
     )
 
-    fts_columns = [col for col in ("title", "description", "text") if col in df.columns]
-    if fts_columns:
-        missing = sorted({"title", "description", "text"} - set(fts_columns))
-        if missing:
-            print(f"Warning: Missing columns for FTS index: {missing}")
-        print(f"Creating French FTS index on {fts_columns}…")
-        tbl.create_fts_index(
-            field_names=fts_columns,
-            use_tantivy=True,
-            language="fr",
-        )
-    else:
-        print("Skipping FTS index: no text columns available.")
+    fts_columns = []
+    for col in df.columns:
+        for prefix in ("title_", "description_", "text_"):
+            if col.startswith(prefix):
+                fts_columns.append(col)
+    print(f"Creating French FTS index on {fts_columns}...")
+    tbl.create_fts_index(
+        field_names=fts_columns,
+        use_tantivy=True,
+    )
 
     # Persist is implicit; LanceDB writes to disk on table operations
     print(f"Database ready at: {db_path} (table: {args.table})")
