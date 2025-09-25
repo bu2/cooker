@@ -49,57 +49,28 @@ def load_recipes(input_dir: Path) -> "pd.DataFrame":
     import pandas as pd
 
     files = sorted(input_dir.rglob("*.json"))
-    records: List[Dict[str, Any]] = []
+    records = []
     for p in files:
-        try:
-            with p.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as e:
-            print(f"Skipping unreadable JSON {p}: {e}")
-            continue
+        with p.open("r", encoding="utf-8") as f:
+            data = json.load(f)
 
-        title = (data.get("title") or "").strip()
-        description = (data.get("description") or "").strip()
-        text = (data.get("text") or "").strip()
-        text = re.sub(r"^```markdown\n|\n```$", "", text)
-        if not text:
-            print(f"Skipping empty text in {p}")
-            continue
+        data = {k:data[k].strip() for k in data}
+        records.append({"id": p.stem, **data})
 
-        records.append({
-            "id": p.stem,
-            "title": title,
-            "description": description,
-            "text": text,
-            "path": str(p),
-        })
-
-    if not records:
-        return pd.DataFrame(columns=["id", "title", "description", "text", "path"])  # empty
-
-    df = pd.DataFrame.from_records(records)
-    # Drop duplicate ids or texts if any
-    df = df.drop_duplicates(subset=["id"]).reset_index(drop=True)
-    return df
+    return pd.DataFrame.from_records(records)
 
 
-def embed_texts(df: "pd.DataFrame", model_name: str, batch_size: int = 32, normalize: bool = False) -> "pd.DataFrame":
+def embed_texts(texts: str, model_name: str, batch_size: int = 32, normalize: bool = False) -> "pd.DataFrame":
     from sentence_transformers import SentenceTransformer
 
     model = SentenceTransformer(model_name)
-    texts = df["text"].tolist()
     embeddings = model.encode(
         texts,
         batch_size=batch_size,
         show_progress_bar=True,
         normalize_embeddings=normalize,
     )
-
-    # Convert to list-of-lists for DataFrame storage
-    emb_list = [row.tolist() for row in embeddings]
-    out = df.copy()
-    out["embedding"] = emb_list
-    return out
+    return embeddings
 
 
 def main():
@@ -139,17 +110,8 @@ def main():
         print("No recipes found to embed.")
         sys.exit(0)
 
-    # Count tokens per recipe text using tiktoken
     import tiktoken
-    try:
-        enc = tiktoken.get_encoding(args.token_encoding)
-    except Exception:
-        try:
-            # Fallback: allow passing a model name
-            enc = tiktoken.encoding_for_model(args.token_encoding)
-        except Exception as e:
-            print(f"Failed to initialize tiktoken encoding '{args.token_encoding}': {e}", file=sys.stderr)
-            raise
+    enc = tiktoken.get_encoding(args.token_encoding)
 
     def _count_tokens(text: str) -> int:
         if not isinstance(text, str):
@@ -159,7 +121,9 @@ def main():
         except Exception:
             return 0
 
-    n_tokens = df["text"].apply(_count_tokens)
+    texts = df["title_fr"] + ": " + df["description_fr"] + "\n" + df["text_fr"]
+
+    n_tokens = texts.apply(_count_tokens)
     total_tokens = int(n_tokens.sum())
     avg_tokens = float(total_tokens) / max(1, len(df))
 
@@ -167,14 +131,15 @@ def main():
         f"Loaded {len(df)} recipes. Total tokens: {total_tokens} (avg {avg_tokens:.1f}/recipe) using encoding '{args.token_encoding}'."
     )
     print(f"Embedding with model: {args.model}")
-    df_emb = embed_texts(df, model_name=args.model, batch_size=args.batch_size, normalize=args.normalize)
+    embeddings = embed_texts(texts, model_name=args.model, batch_size=args.batch_size, normalize=args.normalize)
+    df["embedding"] = list(embeddings)
 
     # Report embedding dimensionality
-    first_vec = df_emb["embedding"].iloc[0]
+    first_vec = df["embedding"].iloc[0]
     dim = len(first_vec) if isinstance(first_vec, list) else None
-    print(f"Embeddings created. Dimension: {dim}. DataFrame shape: {df_emb.shape}")
+    print(f"Embeddings created. Dimension: {dim}. DataFrame shape: {df.shape}")
 
-    df_emb.to_parquet('recipes.parquet')
+    df.to_parquet('recipes.parquet')
     print('Results saved to recipes.parquet.')
 
 
