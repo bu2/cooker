@@ -110,6 +110,16 @@ def main():
         print("No recipes found to embed.")
         sys.exit(0)
 
+    texts = df["text_fr"]
+    cleaned = []
+    for t in texts:
+        if t.startswith("```"):
+            t = t[t.index("\n")+1:]
+        if t.strip().endswith("```"):
+            t = t[:t.rfind("\n")]
+        cleaned.append(t)
+    df["text_fr"] = cleaned
+
     import tiktoken
     enc = tiktoken.get_encoding(args.token_encoding)
 
