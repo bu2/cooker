@@ -25,12 +25,24 @@ DEFAULT_TABLE = os.environ.get("RECIPES_TABLE", "recipes")
 DEFAULT_IMAGES_DIR = os.environ.get("RECIPES_IMAGES", "images")
 
 
+SUPPORTED_LANGUAGES = {"fr", "en"}
+
+
+def normalize_language(lang: Optional[str]) -> str:
+    if not lang:
+        return "fr"
+    normalized = lang.lower()
+    return normalized if normalized in SUPPORTED_LANGUAGES else "fr"
+
+
 class Recipe(BaseModel):
     id: str
     title: Optional[str] = None
     description: Optional[str] = None
     text: str
     image_url: Optional[str] = None
+    n_tokens: Optional[int] = None
+    language: str = "fr"
 
 
 class RecipeListResponse(BaseModel):
@@ -63,8 +75,24 @@ class RecipeStore:
         self.df = self.df.drop_duplicates(subset=["id"]).reset_index(drop=True)
 
         # Keep only relevant columns to avoid large payloads
-        wanted = [c for c in ["id", "title", "description", "text", "path"] if c in self.df.columns]
-        self.df = self.df[wanted]
+        language_columns = [
+            "title_fr",
+            "description_fr",
+            "text_fr",
+            "title_en",
+            "description_en",
+            "text_en",
+        ]
+        optional_language = [c for c in language_columns if c in self.df.columns]
+        other_columns = [c for c in ["title", "description", "text", "path", "n_tokens"] if c in self.df.columns]
+        wanted = ["id", *optional_language, *other_columns]
+        seen = set()
+        filtered_wanted = []
+        for col in wanted:
+            if col not in seen:
+                filtered_wanted.append(col)
+                seen.add(col)
+        self.df = self.df[filtered_wanted]
 
         self.images_dir = images_dir
         self.table = None
@@ -94,21 +122,75 @@ class RecipeStore:
             row["image_url"] = None
         return row
 
-    def list_recipes(self, limit: int = 24, offset: int = 0) -> Tuple[List[Dict[str, Any]], int]:
+    def _localize_row(self, row: Dict[str, Any], lang: str) -> Dict[str, Any]:
+        normalized = normalize_language(lang)
+        fallback = "fr" if normalized != "fr" else "en"
+
+        def pick(field: str) -> Optional[str]:
+            for code in (normalized, fallback):
+                key = f"{field}_{code}"
+                value = row.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value
+            value = row.get(field)
+            if isinstance(value, str) and value.strip():
+                return value
+            return None
+
+        localized: Dict[str, Any] = {
+            "id": row.get("id"),
+            "language": normalized,
+            "title": pick("title"),
+            "description": pick("description"),
+            "text": pick("text") or "",
+        }
+
+        if "n_tokens" in row and row["n_tokens"] is not None:
+            try:
+                localized["n_tokens"] = int(row["n_tokens"])
+            except (TypeError, ValueError):
+                pass
+
+        if row.get("image_url") is not None:
+            localized["image_url"] = row["image_url"]
+
+        return localized
+
+    def _columns_for_search(self, lang: str) -> List[str]:
+        normalized = normalize_language(lang)
+        fallback = "fr" if normalized != "fr" else "en"
+        columns: List[str] = []
+        for field in ("title", "description", "text"):
+            for code in (normalized, fallback):
+                candidate = f"{field}_{code}"
+                if candidate in self.df.columns and candidate not in columns:
+                    columns.append(candidate)
+            if field in self.df.columns and field not in columns:
+                columns.append(field)
+        return columns
+
+    def list_recipes(
+        self, limit: int = 24, offset: int = 0, lang: str = "fr"
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        lang = normalize_language(lang)
         total = len(self.df)
         subset = self.df.iloc[offset : offset + limit].copy()
         rows = subset.to_dict(orient="records")
-        rows = [self._attach_image_url(row) for row in rows]
-        return rows, total
+        localized = [self._localize_row(row, lang) for row in rows]
+        items = [self._attach_image_url(row) for row in localized]
+        return items, total
 
-    def get_recipe(self, recipe_id: str) -> Optional[Dict[str, Any]]:
+    def get_recipe(self, recipe_id: str, lang: str = "fr") -> Optional[Dict[str, Any]]:
+        lang = normalize_language(lang)
         match = self.df[self.df["id"] == recipe_id]
         if match.empty:
             return None
         row = match.iloc[0].to_dict()
-        return self._attach_image_url(row)
+        localized = self._localize_row(row, lang)
+        return self._attach_image_url(localized)
 
-    def search(self, query: str, limit: int = 24) -> List[Dict[str, Any]]:
+    def search(self, query: str, limit: int = 24, lang: str = "fr") -> List[Dict[str, Any]]:
+        lang = normalize_language(lang)
         results: Optional[pd.DataFrame] = None
         if self.table is not None:
             try:
@@ -125,15 +207,18 @@ class RecipeStore:
 
         if results is None or results.empty:
             # Simple fallback: case-insensitive containment
-            mask = (
-                self.df["title"].fillna("").str.contains(query, case=False, na=False)
-                | self.df["text"].fillna("").str.contains(query, case=False, na=False)
-            )
-            results = self.df.loc[mask].head(limit)
+            columns = self._columns_for_search(lang)
+            if columns:
+                mask = pd.Series(False, index=self.df.index)
+                for col in columns:
+                    mask |= self.df[col].fillna("").str.contains(query, case=False, na=False)
+                results = self.df.loc[mask].head(limit)
+            else:
+                results = pd.DataFrame([])
 
-        rows = results.to_dict(orient="records")
-        rows = [self._attach_image_url(row) for row in rows]
-        return rows
+        rows = results.to_dict(orient="records") if results is not None else []
+        localized = [self._localize_row(row, lang) for row in rows]
+        return [self._attach_image_url(row) for row in localized]
 
 
 # Dependency -----------------------------------------------------------------
@@ -176,15 +261,22 @@ def health() -> Dict[str, str]:
 def list_recipes(
     limit: int = Query(24, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    lang: Optional[str] = Query("fr", min_length=2, max_length=5, description="Language code (fr or en)"),
     store: RecipeStore = Depends(get_store),
 ) -> RecipeListResponse:
-    items, total = store.list_recipes(limit=limit, offset=offset)
+    normalized_lang = normalize_language(lang)
+    items, total = store.list_recipes(limit=limit, offset=offset, lang=normalized_lang)
     return RecipeListResponse(total=total, items=[Recipe(**item) for item in items])
 
 
 @app.get("/recipes/{recipe_id}", response_model=Recipe)
-def get_recipe(recipe_id: str, store: RecipeStore = Depends(get_store)) -> Recipe:
-    item = store.get_recipe(recipe_id)
+def get_recipe(
+    recipe_id: str,
+    lang: Optional[str] = Query("fr", min_length=2, max_length=5, description="Language code (fr or en)"),
+    store: RecipeStore = Depends(get_store),
+) -> Recipe:
+    normalized_lang = normalize_language(lang)
+    item = store.get_recipe(recipe_id, lang=normalized_lang)
     if not item:
         raise HTTPException(status_code=404, detail="Recipe not found")
     return Recipe(**item)
@@ -194,9 +286,11 @@ def get_recipe(recipe_id: str, store: RecipeStore = Depends(get_store)) -> Recip
 def search_recipes(
     q: str = Query(..., min_length=1, description="Search text"),
     limit: int = Query(24, ge=1, le=100),
+    lang: Optional[str] = Query("fr", min_length=2, max_length=5, description="Language code (fr or en)"),
     store: RecipeStore = Depends(get_store),
 ) -> List[Recipe]:
-    items = store.search(q, limit=limit)
+    normalized_lang = normalize_language(lang)
+    items = store.search(q, limit=limit, lang=normalized_lang)
     return [Recipe(**item) for item in items]
 
 

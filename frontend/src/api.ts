@@ -1,3 +1,7 @@
+export type Language = "fr" | "en";
+
+const DEFAULT_LANGUAGE: Language = "fr";
+
 export interface Recipe {
   id: string;
   title?: string | null;
@@ -5,6 +9,7 @@ export interface Recipe {
   text: string;
   n_tokens?: number | null;
   image_url?: string | null;
+  language?: Language;
 }
 
 export interface RecipeList {
@@ -40,19 +45,35 @@ export function buildImageUrl(imageUrl?: string | null): string | undefined {
   return `${API_BASE}${imageUrl}`;
 }
 
-export async function fetchRecipes(limit = 24, offset = 0): Promise<RecipeList> {
-  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+export async function fetchRecipes(
+  limit = 24,
+  offset = 0,
+  language: Language = DEFAULT_LANGUAGE
+): Promise<RecipeList> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+    lang: language,
+  });
   const resp = await fetch(`${API_BASE}/recipes?${params.toString()}`);
   return handleResponse<RecipeList>(resp);
 }
 
-export async function searchRecipes(query: string, limit = 24): Promise<Recipe[]> {
-  const params = new URLSearchParams({ q: query, limit: String(limit) });
+export async function searchRecipes(
+  query: string,
+  limit = 24,
+  language: Language = DEFAULT_LANGUAGE
+): Promise<Recipe[]> {
+  const params = new URLSearchParams({ q: query, limit: String(limit), lang: language });
   const resp = await fetch(`${API_BASE}/search?${params.toString()}`);
   return handleResponse<Recipe[]>(resp);
 }
 
-export async function fetchRecipeById(id: string): Promise<Recipe> {
-  const resp = await fetch(`${API_BASE}/recipes/${encodeURIComponent(id)}`);
+export async function fetchRecipeById(
+  id: string,
+  language: Language = DEFAULT_LANGUAGE
+): Promise<Recipe> {
+  const params = new URLSearchParams({ lang: language });
+  const resp = await fetch(`${API_BASE}/recipes/${encodeURIComponent(id)}?${params.toString()}`);
   return handleResponse<Recipe>(resp);
 }

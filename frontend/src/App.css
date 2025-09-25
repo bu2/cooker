@@ -10,6 +10,47 @@
   gap: 1.5rem;
 }
 
+.app__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.language-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #cbd5f5;
+  background: white;
+  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.06);
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.language-switcher label {
+  font-weight: 600;
+}
+
+.language-switcher select {
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+}
+
+.language-switcher select:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
 .app__header h1 {
   margin: 0;
   font-size: 2.5rem;

@@ -1,4 +1,12 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   Recipe,
   RecipeList,
@@ -6,6 +14,7 @@ import {
   fetchRecipes,
   searchRecipes,
   fetchRecipeById,
+  Language,
 } from "./api";
 import "./App.css";
 
@@ -316,12 +325,13 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Recipe | null>(null);
+  const [language, setLanguage] = useState<Language>("fr");
 
-  const loadInitial = async () => {
+  const loadInitial = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data: RecipeList = await fetchRecipes();
+      const data: RecipeList = await fetchRecipes(24, 0, language);
       setRecipes(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -330,11 +340,11 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [language]);
 
   useEffect(() => {
     loadInitial();
-  }, []);
+  }, [loadInitial]);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -345,7 +355,7 @@ function App() {
     }
     setLoading(true);
     try {
-      const items = await searchRecipes(trimmed, 60);
+      const items = await searchRecipes(trimmed, 60, language);
       setRecipes(items);
       setTotal(items.length);
     } catch (err) {
@@ -358,12 +368,28 @@ function App() {
 
   const handleSelect = async (id: string) => {
     try {
-      const recipe = await fetchRecipeById(id);
+      const recipe = await fetchRecipeById(id, language);
       setSelected(recipe);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load recipe";
       setError(message);
     }
+  };
+
+  const handleLanguageChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextLanguage = event.target.value as Language;
+    if (nextLanguage === language) {
+      return;
+    }
+    setLanguage(nextLanguage);
+    setQuery("");
+    setSelected(null);
+    setError(null);
+  };
+
+  const handleReset = () => {
+    setQuery("");
+    loadInitial();
   };
 
   const clearSelection = () => setSelected(null);
@@ -389,19 +415,28 @@ function App() {
             Browse AI-generated recipes, search with full-text, and preview the dishes.
           </p>
         </div>
-        <form className="search" onSubmit={handleSearch}>
-          <input
-            type="search"
-            placeholder="Search for ingredients, cuisines, …"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label="Search recipes"
-          />
-          <button type="submit">Search</button>
-          <button type="button" className="search__reset" onClick={loadInitial}>
-            Reset
-          </button>
-        </form>
+        <div className="app__actions">
+          <div className="language-switcher">
+            <label htmlFor="language-select">Language</label>
+            <select id="language-select" value={language} onChange={handleLanguageChange}>
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <form className="search" onSubmit={handleSearch}>
+            <input
+              type="search"
+              placeholder="Search for ingredients, cuisines, …"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label="Search recipes"
+            />
+            <button type="submit">Search</button>
+            <button type="button" className="search__reset" onClick={handleReset}>
+              Reset
+            </button>
+          </form>
+        </div>
       </header>
 
       {error && <div className="alert alert--error">{error}</div>}
@@ -409,6 +444,7 @@ function App() {
 
       <div className="stats">
         <span>{total.toLocaleString()} recipes</span>
+        <span>Language: {language === "fr" ? "Français" : "English"}</span>
         {query.trim() && <span>Matching “{query.trim()}”</span>}
       </div>
 
