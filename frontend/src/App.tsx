@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -337,6 +338,9 @@ function App() {
   const [selected, setSelected] = useState<Recipe | null>(null);
   const [language, setLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
   const [availableLanguages, setAvailableLanguages] = useState<LanguageCode[]>([DEFAULT_LANGUAGE]);
+  const [activeQuery, setActiveQuery] = useState<string | null>(null);
+  const activeQueryRef = useRef<string | null>(null);
+  const languageRef = useRef(language);
 
   const languageDisplayNames = useMemo(() => {
     try {
@@ -360,24 +364,65 @@ function App() {
     [languageDisplayNames]
   );
 
-  const loadInitial = useCallback(async () => {
+  useEffect(() => {
+    activeQueryRef.current = activeQuery;
+  }, [activeQuery]);
+
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
+
+  const loadRecipesForLanguage = useCallback(async (lang: LanguageCode) => {
     setLoading(true);
     setError(null);
     try {
-      const data: RecipeList = await fetchRecipes(24, 0, language);
+      const data: RecipeList = await fetchRecipes(24, 0, lang);
       setRecipes(data.items);
       setTotal(data.total);
+      setActiveQuery(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load recipes";
       setError(message);
     } finally {
       setLoading(false);
     }
-  }, [language]);
+  }, []);
+
+  const performSearch = useCallback(async (term: string, lang: LanguageCode) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const items = await searchRecipes(term, 60, lang);
+      setRecipes(items);
+      setTotal(items.length);
+      setActiveQuery(term);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Search failed";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const applyLanguageChange = useCallback(
+    async (nextLanguage: LanguageCode) => {
+      setLanguage(nextLanguage);
+      setSelected(null);
+      setError(null);
+
+      const active = activeQueryRef.current;
+      if (active && active.trim()) {
+        await performSearch(active, nextLanguage);
+      } else {
+        await loadRecipesForLanguage(nextLanguage);
+      }
+    },
+    [loadRecipesForLanguage, performSearch]
+  );
 
   useEffect(() => {
-    loadInitial();
-  }, [loadInitial]);
+    void loadRecipesForLanguage(DEFAULT_LANGUAGE);
+  }, [loadRecipesForLanguage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -389,18 +434,12 @@ function App() {
           return;
         }
         setAvailableLanguages(langs);
-        let changed = false;
-        setLanguage((current) => {
-          if (langs.includes(current)) {
-            return current;
+        const currentLanguage = languageRef.current;
+        if (!langs.includes(currentLanguage)) {
+          const nextLanguage = langs[0];
+          if (nextLanguage) {
+            await applyLanguageChange(nextLanguage);
           }
-          changed = true;
-          return langs[0];
-        });
-        if (changed) {
-          setQuery("");
-          setSelected(null);
-          setError(null);
         }
       } catch (err) {
         if (cancelled) {
@@ -411,31 +450,21 @@ function App() {
       }
     };
 
-    loadLanguages();
+    void loadLanguages();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyLanguageChange]);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
     const trimmed = query.trim();
     if (!trimmed) {
-      return loadInitial();
+      await loadRecipesForLanguage(language);
+      return;
     }
-    setLoading(true);
-    try {
-      const items = await searchRecipes(trimmed, 60, language);
-      setRecipes(items);
-      setTotal(items.length);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Search failed";
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
+    await performSearch(trimmed, language);
   };
 
   const handleSelect = async (id: string) => {
@@ -453,15 +482,12 @@ function App() {
     if (nextLanguage === language) {
       return;
     }
-    setLanguage(nextLanguage);
-    setQuery("");
-    setSelected(null);
-    setError(null);
+    void applyLanguageChange(nextLanguage);
   };
 
   const handleReset = () => {
     setQuery("");
-    loadInitial();
+    void loadRecipesForLanguage(language);
   };
 
   const clearSelection = () => setSelected(null);
@@ -525,7 +551,7 @@ function App() {
       <div className="stats">
         <span>{total.toLocaleString()} recipes</span>
         <span>Language: {formatLanguage(language)}</span>
-        {query.trim() && <span>Matching “{query.trim()}”</span>}
+        {activeQuery && <span>Matching “{activeQuery}”</span>}
       </div>
 
       <section className="grid">
