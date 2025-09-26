@@ -22,7 +22,7 @@ except Exception:
 
 TRANSLATOR_LLM = "qwen2.5"
 TOKENIZER = "cl100k_base"
-DEFAULT_TARGET_LANGUAGES = ["en"]
+DEFAULT_TARGET_LANGUAGES = []
 
 
 LANGUAGE_NAMES = {
