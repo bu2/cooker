@@ -39,6 +39,7 @@ def build_prompt(title: str, description: str) -> str:
         "- Donne des instructions concises et précises.\n"
         "- Écris en français.\n"
         "- Utilise le format Markdown.\n"
+        "- Évite les tables.\n"
         "- Si tu ne connais pas la recette, dis-le moi directement. N'invente pas une recette imaginaire.\n"
     )
 
