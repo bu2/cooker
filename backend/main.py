@@ -231,6 +231,20 @@ class RecipeStore:
             row["image_url"] = None
         return row
 
+    def _hydrate_row(self, row: Dict[str, Any]) -> Dict[str, Any]:
+        recipe_id = row.get("id")
+        if recipe_id is None:
+            return row
+        str_id = str(recipe_id)
+        match = self.df[self.df["id"] == str_id]
+        if match.empty:
+            return row
+        base = match.iloc[0].to_dict()
+        for key, value in row.items():
+            if key not in base:
+                base[key] = value
+        return base
+
     def _localize_row(self, row: Dict[str, Any], lang: str) -> Dict[str, Any]:
         normalized = self._normalize_language(lang)
         preferences = self._language_preference(normalized)
@@ -304,19 +318,7 @@ class RecipeStore:
         self, query: str, limit: int = 24, lang: str = DEFAULT_LANGUAGE
     ) -> List[Dict[str, Any]]:
         normalized = self._normalize_language(lang)
-        results: Optional[pd.DataFrame] = None
-        if self.table is not None:
-            try:
-                search_obj = self.table.search(query).limit(limit)
-                if hasattr(search_obj, "to_pandas"):
-                    results = search_obj.to_pandas()
-                elif hasattr(search_obj, "to_df"):
-                    results = search_obj.to_df()  # type: ignore[assignment]
-                elif hasattr(search_obj, "to_list"):
-                    results = pd.DataFrame(search_obj.to_list())
-            except Exception as exc:
-                print(f"Warning: LanceDB search failed: {exc}")
-                results = None
+        results = self.table.search(query).limit(limit).to_pandas()
 
         if results is None or results.empty:
             # Simple fallback: case-insensitive containment
@@ -330,7 +332,8 @@ class RecipeStore:
                 results = pd.DataFrame([])
 
         rows = results.to_dict(orient="records") if results is not None else []
-        localized = [self._localize_row(row, normalized) for row in rows]
+        hydrated = [self._hydrate_row(row) for row in rows]
+        localized = [self._localize_row(row, normalized) for row in hydrated]
         return [self._attach_image_url(row) for row in localized]
 
 
