@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -23,16 +24,10 @@ DEFAULT_PARQUET = os.environ.get("RECIPES_PARQUET", "recipes.parquet")
 DEFAULT_LANCEDB_URI = os.environ.get("RECIPES_LANCEDB", "recipes.db")
 DEFAULT_TABLE = os.environ.get("RECIPES_TABLE", "recipes")
 DEFAULT_IMAGES_DIR = os.environ.get("RECIPES_IMAGES", "images")
+DEFAULT_TRANSLATIONS_DIR = os.environ.get("RECIPES_TRANSLATIONS", "translated_recipes")
 
-
-SUPPORTED_LANGUAGES = {"fr", "en"}
-
-
-def normalize_language(lang: Optional[str]) -> str:
-    if not lang:
-        return "fr"
-    normalized = lang.lower()
-    return normalized if normalized in SUPPORTED_LANGUAGES else "fr"
+DEFAULT_LANGUAGE = "fr"
+RECIPE_FIELDS = ("title", "description", "text")
 
 
 class Recipe(BaseModel):
@@ -50,6 +45,10 @@ class RecipeListResponse(BaseModel):
     items: List[Recipe]
 
 
+class LanguageListResponse(BaseModel):
+    languages: List[str]
+
+
 class RecipeStore:
     """Loads recipes from parquet and optionally backs searches with LanceDB."""
 
@@ -59,9 +58,13 @@ class RecipeStore:
         lancedb_uri: Optional[Path] = None,
         table_name: str = "recipes",
         images_dir: Optional[Path] = None,
+        translations_dir: Optional[Path] = None,
     ) -> None:
         if not parquet_path.exists():
             raise FileNotFoundError(f"Parquet file not found: {parquet_path}")
+
+        self.default_language = DEFAULT_LANGUAGE
+        self.translations_dir = translations_dir
 
         self.df = pd.read_parquet(parquet_path)
         if "id" not in self.df.columns:
@@ -74,25 +77,34 @@ class RecipeStore:
         self.df["id"] = self.df["id"].astype(str)
         self.df = self.df.drop_duplicates(subset=["id"]).reset_index(drop=True)
 
-        # Keep only relevant columns to avoid large payloads
+        translation_languages: Set[str] = set()
+        if translations_dir is not None and translations_dir.exists():
+            translation_languages = self._apply_translations(translations_dir)
+
         language_columns = [
-            "title_fr",
-            "description_fr",
-            "text_fr",
-            "title_en",
-            "description_en",
-            "text_en",
+            col for col in self.df.columns if self._is_language_column(col)
         ]
-        optional_language = [c for c in language_columns if c in self.df.columns]
-        other_columns = [c for c in ["title", "description", "text", "path", "n_tokens"] if c in self.df.columns]
-        wanted = ["id", *optional_language, *other_columns]
-        seen = set()
-        filtered_wanted = []
-        for col in wanted:
-            if col not in seen:
+        other_columns = [
+            col
+            for col in ["title", "description", "text", "path", "n_tokens"]
+            if col in self.df.columns
+        ]
+        base_order = ["id", *language_columns, *other_columns]
+        seen: Set[str] = set()
+        filtered_wanted: List[str] = []
+        for col in base_order:
+            if col in self.df.columns and col not in seen:
                 filtered_wanted.append(col)
                 seen.add(col)
-        self.df = self.df[filtered_wanted]
+        if filtered_wanted:
+            self.df = self.df[filtered_wanted]
+
+        column_languages = self._collect_languages_from_columns(language_columns)
+        self.supported_languages: Set[str] = set(column_languages)
+        self.supported_languages.add(self.default_language)
+        self.supported_languages.update(translation_languages)
+        if not self.supported_languages:
+            self.supported_languages.add(self.default_language)
 
         self.images_dir = images_dir
         self.table = None
@@ -105,6 +117,103 @@ class RecipeStore:
                 self.table = None
 
     # Helper -----------------------------------------------------------------
+    def _apply_translations(self, translations_dir: Path) -> Set[str]:
+        languages: Set[str] = set()
+        translations: Dict[str, Dict[str, str]] = {}
+
+        for path in sorted(translations_dir.glob("*.json")):
+            if not path.is_file():
+                continue
+            try:
+                with path.open("r", encoding="utf-8") as handle:
+                    payload = json.load(handle)
+            except Exception as exc:  # pragma: no cover - best-effort logging
+                print(f"Warning: Unable to load translations from {path}: {exc}")
+                continue
+
+            if not isinstance(payload, dict):
+                continue
+
+            recipe_id = path.stem
+            if not recipe_id:
+                continue
+
+            record = translations.setdefault(recipe_id, {})
+            for key, value in payload.items():
+                if not isinstance(value, str):
+                    continue
+                record[key] = value
+                lang = self._extract_language_from_column(key)
+                if lang:
+                    languages.add(lang)
+
+        if not translations:
+            return languages
+
+        df = self.df.set_index("id", drop=False)
+        for recipe_id, fields in translations.items():
+            if recipe_id not in df.index:
+                # Skip translations for unknown recipes
+                continue
+            for column, value in fields.items():
+                df.loc[recipe_id, column] = value
+        self.df = df.reset_index(drop=True)
+
+        return languages
+
+    @staticmethod
+    def _extract_language_from_column(column: str) -> Optional[str]:
+        for field in RECIPE_FIELDS:
+            prefix = f"{field}_"
+            if column.startswith(prefix):
+                suffix = column[len(prefix) :]
+                if suffix:
+                    return suffix.lower()
+        return None
+
+    @classmethod
+    def _is_language_column(cls, column: str) -> bool:
+        return cls._extract_language_from_column(column) is not None
+
+    def _collect_languages_from_columns(self, columns: List[str]) -> Set[str]:
+        languages: Set[str] = set()
+        for column in columns:
+            lang = self._extract_language_from_column(column)
+            if lang:
+                languages.add(lang)
+        return languages
+
+    def normalize_language(self, lang: Optional[str]) -> str:
+        return self._normalize_language(lang)
+
+    def _normalize_language(self, lang: Optional[str]) -> str:
+        if not lang:
+            return self.default_language
+        normalized = lang.lower()
+        if normalized in self.supported_languages:
+            return normalized
+        return self.default_language
+
+    def _language_preference(self, primary: str) -> List[str]:
+        preferences = [primary, self.default_language, "en", *sorted(self.supported_languages)]
+        ordered: List[str] = []
+        seen: Set[str] = set()
+        for code in preferences:
+            if code in self.supported_languages and code not in seen:
+                ordered.append(code)
+                seen.add(code)
+        return ordered
+
+    def get_supported_languages(self) -> List[str]:
+        preferences = [self.default_language, "en", *sorted(self.supported_languages)]
+        ordered: List[str] = []
+        seen: Set[str] = set()
+        for code in preferences:
+            if code in self.supported_languages and code not in seen:
+                ordered.append(code)
+                seen.add(code)
+        return ordered
+
     def _attach_image_url(self, row: Dict[str, Any]) -> Dict[str, Any]:
         if not self.images_dir:
             row["image_url"] = None
@@ -123,11 +232,11 @@ class RecipeStore:
         return row
 
     def _localize_row(self, row: Dict[str, Any], lang: str) -> Dict[str, Any]:
-        normalized = normalize_language(lang)
-        fallback = "fr" if normalized != "fr" else "en"
+        normalized = self._normalize_language(lang)
+        preferences = self._language_preference(normalized)
 
         def pick(field: str) -> Optional[str]:
-            for code in (normalized, fallback):
+            for code in preferences:
                 key = f"{field}_{code}"
                 value = row.get(key)
                 if isinstance(value, str) and value.strip():
@@ -157,11 +266,11 @@ class RecipeStore:
         return localized
 
     def _columns_for_search(self, lang: str) -> List[str]:
-        normalized = normalize_language(lang)
-        fallback = "fr" if normalized != "fr" else "en"
+        normalized = self._normalize_language(lang)
+        preferences = self._language_preference(normalized)
         columns: List[str] = []
-        for field in ("title", "description", "text"):
-            for code in (normalized, fallback):
+        for field in RECIPE_FIELDS:
+            for code in preferences:
                 candidate = f"{field}_{code}"
                 if candidate in self.df.columns and candidate not in columns:
                     columns.append(candidate)
@@ -170,27 +279,31 @@ class RecipeStore:
         return columns
 
     def list_recipes(
-        self, limit: int = 24, offset: int = 0, lang: str = "fr"
+        self, limit: int = 24, offset: int = 0, lang: str = DEFAULT_LANGUAGE
     ) -> Tuple[List[Dict[str, Any]], int]:
-        lang = normalize_language(lang)
+        normalized = self._normalize_language(lang)
         total = len(self.df)
         subset = self.df.iloc[offset : offset + limit].copy()
         rows = subset.to_dict(orient="records")
-        localized = [self._localize_row(row, lang) for row in rows]
+        localized = [self._localize_row(row, normalized) for row in rows]
         items = [self._attach_image_url(row) for row in localized]
         return items, total
 
-    def get_recipe(self, recipe_id: str, lang: str = "fr") -> Optional[Dict[str, Any]]:
-        lang = normalize_language(lang)
+    def get_recipe(
+        self, recipe_id: str, lang: str = DEFAULT_LANGUAGE
+    ) -> Optional[Dict[str, Any]]:
+        normalized = self._normalize_language(lang)
         match = self.df[self.df["id"] == recipe_id]
         if match.empty:
             return None
         row = match.iloc[0].to_dict()
-        localized = self._localize_row(row, lang)
+        localized = self._localize_row(row, normalized)
         return self._attach_image_url(localized)
 
-    def search(self, query: str, limit: int = 24, lang: str = "fr") -> List[Dict[str, Any]]:
-        lang = normalize_language(lang)
+    def search(
+        self, query: str, limit: int = 24, lang: str = DEFAULT_LANGUAGE
+    ) -> List[Dict[str, Any]]:
+        normalized = self._normalize_language(lang)
         results: Optional[pd.DataFrame] = None
         if self.table is not None:
             try:
@@ -207,7 +320,7 @@ class RecipeStore:
 
         if results is None or results.empty:
             # Simple fallback: case-insensitive containment
-            columns = self._columns_for_search(lang)
+            columns = self._columns_for_search(normalized)
             if columns:
                 mask = pd.Series(False, index=self.df.index)
                 for col in columns:
@@ -217,7 +330,7 @@ class RecipeStore:
                 results = pd.DataFrame([])
 
         rows = results.to_dict(orient="records") if results is not None else []
-        localized = [self._localize_row(row, lang) for row in rows]
+        localized = [self._localize_row(row, normalized) for row in rows]
         return [self._attach_image_url(row) for row in localized]
 
 
@@ -227,14 +340,15 @@ def get_store() -> RecipeStore:
     if not hasattr(get_store, "_instance"):
         parquet_path = Path(DEFAULT_PARQUET)
         lancedb_uri = Path(DEFAULT_LANCEDB_URI) if DEFAULT_LANCEDB_URI else None
-        images_dir = Path(DEFAULT_IMAGES_DIR)
-        if not images_dir.exists():
-            images_dir = None
+        images_dir_path = Path(DEFAULT_IMAGES_DIR)
+        images_dir = images_dir_path if images_dir_path.exists() else None
+        translations_dir = Path(DEFAULT_TRANSLATIONS_DIR) if DEFAULT_TRANSLATIONS_DIR else None
         get_store._instance = RecipeStore(
             parquet_path=parquet_path,
             lancedb_uri=lancedb_uri,
             table_name=DEFAULT_TABLE,
             images_dir=images_dir,
+            translations_dir=translations_dir,
         )
     return get_store._instance  # type: ignore[attr-defined]
 
@@ -257,14 +371,24 @@ def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/languages", response_model=LanguageListResponse)
+def list_languages(store: RecipeStore = Depends(get_store)) -> LanguageListResponse:
+    return LanguageListResponse(languages=store.get_supported_languages())
+
+
 @app.get("/recipes", response_model=RecipeListResponse)
 def list_recipes(
     limit: int = Query(24, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    lang: Optional[str] = Query("fr", min_length=2, max_length=5, description="Language code (fr or en)"),
+    lang: Optional[str] = Query(
+        DEFAULT_LANGUAGE,
+        min_length=2,
+        max_length=15,
+        description="Language code",
+    ),
     store: RecipeStore = Depends(get_store),
 ) -> RecipeListResponse:
-    normalized_lang = normalize_language(lang)
+    normalized_lang = store.normalize_language(lang)
     items, total = store.list_recipes(limit=limit, offset=offset, lang=normalized_lang)
     return RecipeListResponse(total=total, items=[Recipe(**item) for item in items])
 
@@ -272,10 +396,15 @@ def list_recipes(
 @app.get("/recipes/{recipe_id}", response_model=Recipe)
 def get_recipe(
     recipe_id: str,
-    lang: Optional[str] = Query("fr", min_length=2, max_length=5, description="Language code (fr or en)"),
+    lang: Optional[str] = Query(
+        DEFAULT_LANGUAGE,
+        min_length=2,
+        max_length=15,
+        description="Language code",
+    ),
     store: RecipeStore = Depends(get_store),
 ) -> Recipe:
-    normalized_lang = normalize_language(lang)
+    normalized_lang = store.normalize_language(lang)
     item = store.get_recipe(recipe_id, lang=normalized_lang)
     if not item:
         raise HTTPException(status_code=404, detail="Recipe not found")
@@ -286,10 +415,15 @@ def get_recipe(
 def search_recipes(
     q: str = Query(..., min_length=1, description="Search text"),
     limit: int = Query(24, ge=1, le=100),
-    lang: Optional[str] = Query("fr", min_length=2, max_length=5, description="Language code (fr or en)"),
+    lang: Optional[str] = Query(
+        DEFAULT_LANGUAGE,
+        min_length=2,
+        max_length=15,
+        description="Language code",
+    ),
     store: RecipeStore = Depends(get_store),
 ) -> List[Recipe]:
-    normalized_lang = normalize_language(lang)
+    normalized_lang = store.normalize_language(lang)
     items = store.search(q, limit=limit, lang=normalized_lang)
     return [Recipe(**item) for item in items]
 

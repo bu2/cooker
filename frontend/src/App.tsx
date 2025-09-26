@@ -14,9 +14,19 @@ import {
   fetchRecipes,
   searchRecipes,
   fetchRecipeById,
-  Language,
+  fetchLanguages,
+  LanguageCode,
+  DEFAULT_LANGUAGE,
 } from "./api";
 import "./App.css";
+
+const FALLBACK_LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  fr: "Français",
+  es: "Español",
+  de: "Deutsch",
+  zh: "中文",
+};
 
 function truncate(text: string, length = 160): string {
   if (text.length <= length) return text;
@@ -325,7 +335,30 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Recipe | null>(null);
-  const [language, setLanguage] = useState<Language>("fr");
+  const [language, setLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
+  const [availableLanguages, setAvailableLanguages] = useState<LanguageCode[]>([DEFAULT_LANGUAGE]);
+
+  const languageDisplayNames = useMemo(() => {
+    try {
+      return new Intl.DisplayNames([navigator.language || "en"], { type: "language" });
+    } catch (err) {
+      return null;
+    }
+  }, []);
+
+  const formatLanguage = useCallback(
+    (code: LanguageCode) => {
+      if (languageDisplayNames) {
+        const display = languageDisplayNames.of(code);
+        if (display) {
+          return display;
+        }
+      }
+      const fallback = FALLBACK_LANGUAGE_NAMES[code.toLowerCase()];
+      return fallback ?? code;
+    },
+    [languageDisplayNames]
+  );
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
@@ -345,6 +378,45 @@ function App() {
   useEffect(() => {
     loadInitial();
   }, [loadInitial]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLanguages = async () => {
+      try {
+        const langs = await fetchLanguages();
+        if (cancelled || !langs.length) {
+          return;
+        }
+        setAvailableLanguages(langs);
+        let changed = false;
+        setLanguage((current) => {
+          if (langs.includes(current)) {
+            return current;
+          }
+          changed = true;
+          return langs[0];
+        });
+        if (changed) {
+          setQuery("");
+          setSelected(null);
+          setError(null);
+        }
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+        const message = err instanceof Error ? err.message : "Failed to load languages";
+        setError(message);
+      }
+    };
+
+    loadLanguages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -377,7 +449,7 @@ function App() {
   };
 
   const handleLanguageChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const nextLanguage = event.target.value as Language;
+    const nextLanguage = event.target.value as LanguageCode;
     if (nextLanguage === language) {
       return;
     }
@@ -418,9 +490,17 @@ function App() {
         <div className="app__actions">
           <div className="language-switcher">
             <label htmlFor="language-select">Language</label>
-            <select id="language-select" value={language} onChange={handleLanguageChange}>
-              <option value="fr">Français</option>
-              <option value="en">English</option>
+            <select
+              id="language-select"
+              value={language}
+              onChange={handleLanguageChange}
+              disabled={availableLanguages.length <= 1}
+            >
+              {availableLanguages.map((code) => (
+                <option key={code} value={code}>
+                  {formatLanguage(code)}
+                </option>
+              ))}
             </select>
           </div>
           <form className="search" onSubmit={handleSearch}>
@@ -444,7 +524,7 @@ function App() {
 
       <div className="stats">
         <span>{total.toLocaleString()} recipes</span>
-        <span>Language: {language === "fr" ? "Français" : "English"}</span>
+        <span>Language: {formatLanguage(language)}</span>
         {query.trim() && <span>Matching “{query.trim()}”</span>}
       </div>
 

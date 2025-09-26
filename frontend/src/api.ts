@@ -1,6 +1,6 @@
-export type Language = "fr" | "en";
+export type LanguageCode = string;
 
-const DEFAULT_LANGUAGE: Language = "fr";
+export const DEFAULT_LANGUAGE: LanguageCode = "fr";
 
 export interface Recipe {
   id: string;
@@ -9,12 +9,16 @@ export interface Recipe {
   text: string;
   n_tokens?: number | null;
   image_url?: string | null;
-  language?: Language;
+  language?: LanguageCode;
 }
 
 export interface RecipeList {
   total: number;
   items: Recipe[];
+}
+
+interface LanguageListResponse {
+  languages: string[];
 }
 
 const DEFAULT_BASE = "http://192.168.1.13:8000";
@@ -48,7 +52,7 @@ export function buildImageUrl(imageUrl?: string | null): string | undefined {
 export async function fetchRecipes(
   limit = 24,
   offset = 0,
-  language: Language = DEFAULT_LANGUAGE
+  language: LanguageCode = DEFAULT_LANGUAGE
 ): Promise<RecipeList> {
   const params = new URLSearchParams({
     limit: String(limit),
@@ -62,7 +66,7 @@ export async function fetchRecipes(
 export async function searchRecipes(
   query: string,
   limit = 24,
-  language: Language = DEFAULT_LANGUAGE
+  language: LanguageCode = DEFAULT_LANGUAGE
 ): Promise<Recipe[]> {
   const params = new URLSearchParams({ q: query, limit: String(limit), lang: language });
   const resp = await fetch(`${API_BASE}/search?${params.toString()}`);
@@ -71,9 +75,28 @@ export async function searchRecipes(
 
 export async function fetchRecipeById(
   id: string,
-  language: Language = DEFAULT_LANGUAGE
+  language: LanguageCode = DEFAULT_LANGUAGE
 ): Promise<Recipe> {
   const params = new URLSearchParams({ lang: language });
   const resp = await fetch(`${API_BASE}/recipes/${encodeURIComponent(id)}?${params.toString()}`);
   return handleResponse<Recipe>(resp);
+}
+
+export async function fetchLanguages(): Promise<LanguageCode[]> {
+  const resp = await fetch(`${API_BASE}/languages`);
+  const data = await handleResponse<LanguageListResponse>(resp);
+  if (!data.languages || data.languages.length === 0) {
+    return [DEFAULT_LANGUAGE];
+  }
+  const seen = new Set<string>();
+  const normalized = data.languages
+    .map((code) => code.trim())
+    .filter((code) => {
+      if (!code) return false;
+      const lower = code.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+  return normalized.length ? normalized : [DEFAULT_LANGUAGE];
 }
