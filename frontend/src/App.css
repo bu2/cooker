@@ -142,6 +142,20 @@
   gap: 1.75rem;
 }
 
+.grid > * {
+  margin-top: 0;
+}
+
+@media (min-width: 600px) {
+  .grid > *:nth-of-type(even) {
+    margin-top: 5rem;
+  }
+
+  .grid > *:nth-of-type(even) {
+    margin-bottom: -5rem;
+  }
+}
+
 .card {
   background: white;
   border-radius: 1.25rem;
