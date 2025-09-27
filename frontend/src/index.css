@@ -13,6 +13,14 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.93)),
+    url("./assets/red-white-gingham-pattern_1048-8291.jpg");
+  background-repeat: no-repeat, repeat;
+  background-size: cover, 220px 220px;
+  background-position: center, center;
+  background-attachment: fixed, scroll;
 }
 
 button, input {
