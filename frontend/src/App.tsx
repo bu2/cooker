@@ -21,13 +21,100 @@ import {
 } from "./api";
 import "./App.css";
 
+const DEFAULT_FLAG = "🌐";
+
+const LANGUAGE_METADATA: Record<string, { nativeName: string; flag: string }> = {
+  en: { nativeName: "English", flag: "🇺🇸" },
+  "en-gb": { nativeName: "English (UK)", flag: "🇬🇧" },
+  fr: { nativeName: "Français", flag: "🇫🇷" },
+  es: { nativeName: "Español", flag: "🇪🇸" },
+  de: { nativeName: "Deutsch", flag: "🇩🇪" },
+  it: { nativeName: "Italiano", flag: "🇮🇹" },
+  pt: { nativeName: "Português", flag: "🇵🇹" },
+  "pt-br": { nativeName: "Português (Brasil)", flag: "🇧🇷" },
+  nl: { nativeName: "Nederlands", flag: "🇳🇱" },
+  sv: { nativeName: "Svenska", flag: "🇸🇪" },
+  fi: { nativeName: "Suomi", flag: "🇫🇮" },
+  da: { nativeName: "Dansk", flag: "🇩🇰" },
+  pl: { nativeName: "Polski", flag: "🇵🇱" },
+  cs: { nativeName: "Čeština", flag: "🇨🇿" },
+  tr: { nativeName: "Türkçe", flag: "🇹🇷" },
+  ru: { nativeName: "Русский", flag: "🇷🇺" },
+  zh: { nativeName: "中文", flag: "🇨🇳" },
+  "zh-hant": { nativeName: "中文（繁體）", flag: "🇹🇼" },
+  ja: { nativeName: "日本語", flag: "🇯🇵" },
+  ko: { nativeName: "한국어", flag: "🇰🇷" },
+  ar: { nativeName: "العربية", flag: "🇸🇦" },
+  hi: { nativeName: "हिन्दी", flag: "🇮🇳" },
+};
+
 const FALLBACK_LANGUAGE_NAMES: Record<string, string> = {
   en: "English",
   fr: "Français",
   es: "Español",
   de: "Deutsch",
   zh: "中文",
+  "en-gb": "English (UK)",
+  "pt-br": "Português (Brasil)",
+  "zh-hant": "中文（繁體）",
+  it: "Italiano",
+  pt: "Português",
+  nl: "Nederlands",
+  sv: "Svenska",
+  fi: "Suomi",
+  da: "Dansk",
+  pl: "Polski",
+  cs: "Čeština",
+  tr: "Türkçe",
+  ru: "Русский",
+  ja: "日本語",
+  ko: "한국어",
+  ar: "العربية",
+  hi: "हिन्दी",
 };
+
+function normalizeLanguageCode(code: string): string {
+  return code.toLowerCase().replace(/_/g, "-");
+}
+
+function toFlagEmoji(region: string): string | null {
+  if (!/^[A-Z]{2}$/.test(region)) {
+    return null;
+  }
+  const base = 127397;
+  const chars = [...region];
+  return String.fromCodePoint(
+    ...chars.map((char) => base + char.charCodeAt(0))
+  );
+}
+
+function resolveLanguageMetadata(
+  code: string
+): { nativeName: string; flag: string } | undefined {
+  const normalized = normalizeLanguageCode(code);
+  if (LANGUAGE_METADATA[normalized]) {
+    return LANGUAGE_METADATA[normalized];
+  }
+  const [base] = normalized.split("-");
+  return LANGUAGE_METADATA[base];
+}
+
+function getLanguageFlag(code: string): string {
+  const metadata = resolveLanguageMetadata(code);
+  if (metadata?.flag) {
+    return metadata.flag;
+  }
+  const normalized = normalizeLanguageCode(code);
+  const parts = normalized.split("-");
+  if (parts.length > 1) {
+    const region = parts[parts.length - 1].toUpperCase();
+    const flag = toFlagEmoji(region);
+    if (flag) {
+      return flag;
+    }
+  }
+  return DEFAULT_FLAG;
+}
 
 function truncate(text: string, length = 160): string {
   if (text.length <= length) return text;
@@ -341,6 +428,7 @@ function App() {
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
   const activeQueryRef = useRef<string | null>(null);
   const languageRef = useRef(language);
+  const nativeNameCache = useRef<Map<string, string>>(new Map());
 
   const languageDisplayNames = useMemo(() => {
     try {
@@ -350,18 +438,65 @@ function App() {
     }
   }, []);
 
-  const formatLanguage = useCallback(
+  const getNativeLanguageName = useCallback(
     (code: LanguageCode) => {
-      if (languageDisplayNames) {
-        const display = languageDisplayNames.of(code);
-        if (display) {
-          return display;
+      const cached = nativeNameCache.current.get(code);
+      if (cached) {
+        return cached;
+      }
+
+      const metadata = resolveLanguageMetadata(code);
+      if (metadata?.nativeName) {
+        nativeNameCache.current.set(code, metadata.nativeName);
+        return metadata.nativeName;
+      }
+
+      const normalized = normalizeLanguageCode(code);
+      const [base] = normalized.split("-");
+      const candidateLocales = Array.from(new Set([normalized, base].filter(Boolean)));
+
+      for (const locale of candidateLocales) {
+        try {
+          const nativeDisplayNames = new Intl.DisplayNames([locale], { type: "language" });
+          const native = nativeDisplayNames.of(code);
+          if (native && native.toLowerCase() !== code.toLowerCase()) {
+            nativeNameCache.current.set(code, native);
+            return native;
+          }
+        } catch (err) {
+          // ignore unsupported locale
         }
       }
-      const fallback = FALLBACK_LANGUAGE_NAMES[code.toLowerCase()];
-      return fallback ?? code;
+
+      for (const locale of candidateLocales) {
+        const fallback = FALLBACK_LANGUAGE_NAMES[locale];
+        if (fallback) {
+          nativeNameCache.current.set(code, fallback);
+          return fallback;
+        }
+      }
+
+      if (languageDisplayNames) {
+        const localized = languageDisplayNames.of(code);
+        if (localized && localized.toLowerCase() !== code.toLowerCase()) {
+          nativeNameCache.current.set(code, localized);
+          return localized;
+        }
+      }
+
+      nativeNameCache.current.set(code, code);
+      return code;
     },
     [languageDisplayNames]
+  );
+
+  const formatLanguage = useCallback(
+    (code: LanguageCode) => {
+      const flag = getLanguageFlag(code);
+      const native = getNativeLanguageName(code);
+      return `${flag} ${native}`;
+    },
+    [getNativeLanguageName]
   );
 
   useEffect(() => {
@@ -515,7 +650,6 @@ function App() {
         </div>
         <div className="app__actions">
           <div className="language-switcher">
-            <label htmlFor="language-select">Language</label>
             <select
               id="language-select"
               value={language}
@@ -550,7 +684,6 @@ function App() {
 
       <div className="stats">
         <span>{total.toLocaleString()} recipes</span>
-        <span>Language: {formatLanguage(language)}</span>
         {activeQuery && <span>Matching “{activeQuery}”</span>}
       </div>
 
