@@ -260,6 +260,78 @@
   object-fit: cover;
 }
 
+.recipe-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.modal__header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.modal__title {
+  margin: 0;
+}
+
+.modal__open {
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #e2e8f0;
+  color: #1f2937;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.modal__open:hover {
+  background: #cbd5e1;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.modal__header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.modal__title {
+  margin: 0;
+}
+
+.modal__open {
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #e2e8f0;
+  color: #1f2937;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.modal__open:hover {
+  background: #cbd5e1;
+}
+
 .modal__markdown {
   display: flex;
   flex-direction: column;

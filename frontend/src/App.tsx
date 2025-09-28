@@ -182,6 +182,21 @@ function renderInline(text: string): ReactNode[] {
   return segments.length > 0 ? segments : [text];
 }
 
+// (duplicate removed)
+
+function buildRecipePageUrl(id: string, lang: LanguageCode): string {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", normalizeLanguageCode(lang));
+    url.searchParams.set("id", id);
+    // Keep permalinks clean: drop transient search query
+    url.searchParams.delete("q");
+    return url.toString();
+  } catch {
+    return `/?lang=${encodeURIComponent(normalizeLanguageCode(lang))}&id=${encodeURIComponent(id)}`;
+  }
+}
+
 function headingElement(level: number, key: string, children: ReactNode) {
   switch (level) {
     case 1:
@@ -373,8 +388,22 @@ function RecipeCard({ recipe, onSelect }: { recipe: Recipe; onSelect: (id: strin
     [recipe.id]
   );
 
+  const handleClick = () => {
+    const isMobile =
+      typeof window !== "undefined" &&
+      "matchMedia" in window &&
+      window.matchMedia("(max-width: 720px)").matches;
+    if (isMobile) {
+      const lang = (recipe.language as LanguageCode) || DEFAULT_LANGUAGE;
+      const href = buildRecipePageUrl(recipe.id, lang);
+      window.open(href, "_blank", "noopener,noreferrer");
+      return;
+    }
+    onSelect(recipe.id);
+  };
+
   return (
-    <article className="card" onClick={() => onSelect(recipe.id)}>
+    <article className="card" onClick={handleClick}>
       {imageUrl ? (
         <img src={imageUrl} alt={recipe.title ?? recipe.id} loading="lazy" />
       ) : (
@@ -401,11 +430,25 @@ function RecipeModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
         <button className="modal__close" onClick={onClose}>
           ×
         </button>
-        <header>
-          <h2>{recipe.title || recipe.id}</h2>
-          {recipe.n_tokens != null && (
-            <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>
-          )}
+        <header className="modal__header">
+          <div className="modal__header-info">
+            <h2 className="modal__title">{recipe.title || recipe.id}</h2>
+            {recipe.n_tokens != null && (
+              <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>
+            )}
+          </div>
+          <a
+            className="modal__open"
+            href={buildRecipePageUrl(
+              recipe.id,
+              (recipe.language as LanguageCode) || DEFAULT_LANGUAGE
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open recipe in a new tab"
+          >
+            Open in new tab ↗
+          </a>
         </header>
         {imageUrl && (
           <img src={imageUrl} alt={recipe.title ?? recipe.id} className="modal__image" />
@@ -423,6 +466,7 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Recipe | null>(null);
+  const [isStandalone, setIsStandalone] = useState<boolean>(false);
   const [language, setLanguage] = useState<LanguageCode>(DEFAULT_LANGUAGE);
   const [availableLanguages, setAvailableLanguages] = useState<LanguageCode[]>([DEFAULT_LANGUAGE]);
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
@@ -431,25 +475,33 @@ function App() {
   const nativeNameCache = useRef<Map<string, string>>(new Map());
   const bootstrappedRef = useRef(false);
 
-  const setURLParams = useCallback((lang: LanguageCode, q: string | null | undefined) => {
-    try {
-      const url = new URL(window.location.href);
-      if (lang) {
-        url.searchParams.set("lang", normalizeLanguageCode(lang));
+  const setURLParams = useCallback(
+    (lang: LanguageCode, q: string | null | undefined, id?: string | null) => {
+      try {
+        const url = new URL(window.location.href);
+        if (lang) {
+          url.searchParams.set("lang", normalizeLanguageCode(lang));
+        }
+        if (q && q.trim()) {
+          url.searchParams.set("q", q.trim());
+        } else {
+          url.searchParams.delete("q");
+        }
+        if (id && id.trim()) {
+          url.searchParams.set("id", id);
+        } else {
+          url.searchParams.delete("id");
+        }
+        const next = url.toString();
+        if (next !== window.location.href) {
+          window.history.replaceState({}, "", next);
+        }
+      } catch {
+        // no-op for non-browser envs
       }
-      if (q && q.trim()) {
-        url.searchParams.set("q", q.trim());
-      } else {
-        url.searchParams.delete("q");
-      }
-      const next = url.toString();
-      if (next !== window.location.href) {
-        window.history.replaceState({}, "", next);
-      }
-    } catch {
-      // no-op for non-browser envs
-    }
-  }, []);
+    },
+    []
+  );
 
   const languageDisplayNames = useMemo(() => {
     try {
@@ -552,7 +604,7 @@ function App() {
       setRecipes(items);
       setTotal(items.length);
       setActiveQuery(term);
-      setURLParams(lang, term);
+      setURLParams(lang, term, null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Search failed";
       setError(message);
@@ -564,18 +616,34 @@ function App() {
   const applyLanguageChange = useCallback(
     async (nextLanguage: LanguageCode) => {
       setLanguage(nextLanguage);
-      setSelected(null);
       setError(null);
 
+      const keepRecipe = isStandalone && selected?.id;
+      if (keepRecipe) {
+        try {
+          setLoading(true);
+          const updated = await fetchRecipeById(selected!.id, nextLanguage);
+          setSelected(updated);
+          setURLParams(nextLanguage, activeQueryRef.current, selected!.id);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to load recipe";
+          setError(message);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      setSelected(null);
       const active = activeQueryRef.current;
       if (active && active.trim()) {
         await performSearch(active, nextLanguage);
       } else {
         await loadRecipesForLanguage(nextLanguage);
       }
-      setURLParams(nextLanguage, activeQueryRef.current);
+      setURLParams(nextLanguage, activeQueryRef.current, null);
     },
-    [loadRecipesForLanguage, performSearch, setURLParams]
+    [isStandalone, selected, loadRecipesForLanguage, performSearch, setURLParams]
   );
 
   useEffect(() => {
@@ -585,17 +653,34 @@ function App() {
     const url = new URL(window.location.href);
     const urlLang = (url.searchParams.get("lang") || DEFAULT_LANGUAGE) as LanguageCode;
     const urlQueryRaw = url.searchParams.get("q") || "";
+    const urlId = url.searchParams.get("id") || "";
     const urlQuery = urlQueryRaw.trim();
 
     setLanguage(urlLang);
     setQuery(urlQueryRaw);
+    setIsStandalone(Boolean(urlId));
 
     const run = async () => {
       if (urlQuery) {
         await performSearch(urlQuery, urlLang);
       } else {
         await loadRecipesForLanguage(urlLang);
-        setURLParams(urlLang, null);
+        // Preserve id if present on initial load
+        if (!urlId) {
+          setURLParams(urlLang, null, null);
+        }
+      }
+      if (urlId) {
+        try {
+          setLoading(true);
+          const initial = await fetchRecipeById(urlId, urlLang);
+          setSelected(initial);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Failed to load recipe";
+          setError(message);
+        } finally {
+          setLoading(false);
+        }
       }
     };
 
@@ -649,6 +734,7 @@ function App() {
     try {
       const recipe = await fetchRecipeById(id, language);
       setSelected(recipe);
+      setURLParams(language, activeQueryRef.current, id);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load recipe";
       setError(message);
@@ -668,14 +754,18 @@ function App() {
     void (async () => {
       await loadRecipesForLanguage(language);
       setActiveQuery(null);
-      setURLParams(language, null);
+      setURLParams(language, null, null);
     })();
   };
 
-  const clearSelection = () => setSelected(null);
+  const clearSelection = () => {
+    setSelected(null);
+    setIsStandalone(false);
+    setURLParams(language, activeQueryRef.current, null);
+  };
 
   useEffect(() => {
-    if (!selected) {
+    if (!selected || isStandalone) {
       return;
     }
     const { style } = document.body;
@@ -684,15 +774,15 @@ function App() {
     return () => {
       style.overflow = previousOverflow;
     };
-  }, [selected]);
+  }, [selected, isStandalone]);
 
   return (
     <div className="app">
       <header className="app__header">
         <div>
-          <h1>Recipe Gallery</h1>
+          <h1>LaTambouille.fr</h1>
           <p className="app__subtitle">
-            Browse AI-generated recipes, search with full-text, and preview the dishes.
+            La Cuisine Française traditionnelle dans votre assiette.
           </p>
         </div>
         <div className="app__actions">
@@ -710,37 +800,68 @@ function App() {
               ))}
             </select>
           </div>
-          <form className="search" onSubmit={handleSearch}>
-            <input
-              type="search"
-              placeholder="Search for ingredients, cuisines, …"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              aria-label="Search recipes"
-            />
-            <button type="submit">Search</button>
-            <button type="button" className="search__reset" onClick={handleReset}>
-              Reset
-            </button>
-          </form>
+          {!isStandalone && (
+            <form className="search" onSubmit={handleSearch}>
+              <input
+                type="search"
+                placeholder="Rechercher..."
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                aria-label="Search recipes"
+              />
+              <button type="submit">Search</button>
+              <button type="button" className="search__reset" onClick={handleReset}>
+                Reset
+              </button>
+            </form>
+          )}
         </div>
       </header>
 
       {error && <div className="alert alert--error">{error}</div>}
       {loading && <div className="alert">Loading…</div>}
 
-      <div className="stats">
-        <span>{total.toLocaleString()} recipes</span>
-        {activeQuery && <span>Matching “{activeQuery}”</span>}
-      </div>
+      {!isStandalone && (
+        <div className="stats">
+          <span>{total.toLocaleString()} recipes</span>
+          {activeQuery && <span>Matching “{activeQuery}”</span>}
+        </div>
+      )}
 
-      <section className="grid">
-        {recipes.map((recipe) => (
-          <RecipeCard key={recipe.id} recipe={recipe} onSelect={handleSelect} />
-        ))}
-      </section>
-
-      {selected && <RecipeModal recipe={selected} onClose={clearSelection} />}
+      {isStandalone ? (
+        <section className="recipe-view">
+          {loading && <div className="alert">Loading…</div>}
+          {selected && (
+            <>
+              <header className="modal__header">
+                <div className="modal__header-info">
+                  <h2 className="modal__title">{selected.title || selected.id}</h2>
+                  {selected.n_tokens != null && (
+                    <p className="modal__tokens">Tokens: {selected.n_tokens.toLocaleString()}</p>
+                  )}
+                </div>
+              </header>
+              {buildImageUrl(selected.image_url) && (
+                <img
+                  src={buildImageUrl(selected.image_url)}
+                  alt={selected.title ?? selected.id}
+                  className="modal__image"
+                />
+              )}
+              <MarkdownContent text={selected.text} />
+            </>
+          )}
+        </section>
+      ) : (
+        <>
+          <section className="grid">
+            {recipes.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} onSelect={handleSelect} />
+            ))}
+          </section>
+          {selected && <RecipeModal recipe={selected} onClose={clearSelection} />}
+        </>
+      )}
     </div>
   );
 }
