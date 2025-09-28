@@ -429,6 +429,27 @@ function App() {
   const activeQueryRef = useRef<string | null>(null);
   const languageRef = useRef(language);
   const nativeNameCache = useRef<Map<string, string>>(new Map());
+  const bootstrappedRef = useRef(false);
+
+  const setURLParams = useCallback((lang: LanguageCode, q: string | null | undefined) => {
+    try {
+      const url = new URL(window.location.href);
+      if (lang) {
+        url.searchParams.set("lang", normalizeLanguageCode(lang));
+      }
+      if (q && q.trim()) {
+        url.searchParams.set("q", q.trim());
+      } else {
+        url.searchParams.delete("q");
+      }
+      const next = url.toString();
+      if (next !== window.location.href) {
+        window.history.replaceState({}, "", next);
+      }
+    } catch {
+      // no-op for non-browser envs
+    }
+  }, []);
 
   const languageDisplayNames = useMemo(() => {
     try {
@@ -531,13 +552,14 @@ function App() {
       setRecipes(items);
       setTotal(items.length);
       setActiveQuery(term);
+      setURLParams(lang, term);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Search failed";
       setError(message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setURLParams]);
 
   const applyLanguageChange = useCallback(
     async (nextLanguage: LanguageCode) => {
@@ -551,13 +573,34 @@ function App() {
       } else {
         await loadRecipesForLanguage(nextLanguage);
       }
+      setURLParams(nextLanguage, activeQueryRef.current);
     },
-    [loadRecipesForLanguage, performSearch]
+    [loadRecipesForLanguage, performSearch, setURLParams]
   );
 
   useEffect(() => {
-    void loadRecipesForLanguage(DEFAULT_LANGUAGE);
-  }, [loadRecipesForLanguage]);
+    if (bootstrappedRef.current) return;
+    bootstrappedRef.current = true;
+
+    const url = new URL(window.location.href);
+    const urlLang = (url.searchParams.get("lang") || DEFAULT_LANGUAGE) as LanguageCode;
+    const urlQueryRaw = url.searchParams.get("q") || "";
+    const urlQuery = urlQueryRaw.trim();
+
+    setLanguage(urlLang);
+    setQuery(urlQueryRaw);
+
+    const run = async () => {
+      if (urlQuery) {
+        await performSearch(urlQuery, urlLang);
+      } else {
+        await loadRecipesForLanguage(urlLang);
+        setURLParams(urlLang, null);
+      }
+    };
+
+    void run();
+  }, [loadRecipesForLanguage, performSearch, setURLParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -622,7 +665,11 @@ function App() {
 
   const handleReset = () => {
     setQuery("");
-    void loadRecipesForLanguage(language);
+    void (async () => {
+      await loadRecipesForLanguage(language);
+      setActiveQuery(null);
+      setURLParams(language, null);
+    })();
   };
 
   const clearSelection = () => setSelected(null);
