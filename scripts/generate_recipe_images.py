@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -42,21 +41,6 @@ def _require_deps():
     except Exception:
         print("Error: openai is required. Install with: pip install openai", file=sys.stderr)
         raise
-
-
-def _load_from_parquet(path: Path) -> "pd.DataFrame":
-    import pandas as pd
-    df = pd.read_parquet(path)
-    # Expect columns: id, text (title optional)
-    if "id" not in df.columns:
-        print("Warning: 'id' column not found in parquet; attempting to derive from 'path' or index.")
-        if "path" in df.columns:
-            df["id"] = df["path"].apply(lambda p: Path(str(p)).stem)
-        else:
-            df["id"] = df.index.astype(str)
-    if "text" not in df.columns:
-        raise ValueError("Parquet must contain a 'text' column.")
-    return df[[c for c in ["id", "title", "text", "path"] if c in df.columns]].copy()
 
 
 def _load_from_json_dir(dir_path: Path) -> "pd.DataFrame":
@@ -78,10 +62,11 @@ def _load_from_json_dir(dir_path: Path) -> "pd.DataFrame":
         rows.append({
             "id": p.stem,
             "title": (data.get("title") or "").strip(),
+            "description": (data.get("description") or "").strip(),
             "text": text,
             "path": str(p),
         })
-    return pd.DataFrame.from_records(rows) if rows else pd.DataFrame(columns=["id", "title", "text", "path"])  # type: ignore[name-defined]
+    return pd.DataFrame.from_records(rows) if rows else pd.DataFrame(columns=["id", "title", "description", "text", "path"])  # type: ignore[name-defined]
 
 
 def _ensure_outdir(path: Path) -> None:
@@ -89,7 +74,7 @@ def _ensure_outdir(path: Path) -> None:
 
 
 def _build_prompt(text: str) -> str:
-    suffix = "\n\nGenerate a picture of the recipe as if it was in your plate."
+    suffix = "\n\nGenerate a picture of the recipe as if it was in your plate. Do not show any text."
     return f"{text.strip()}" + suffix
 
 
@@ -120,7 +105,7 @@ def _worker(client, row: Dict[str, Any], outdir: Path, size: str, quality: str, 
     if out_path.exists() and not overwrite:
         return (rid, True, "skipped (exists)")
 
-    prompt = _build_prompt(str(row.get("text", "")))
+    prompt = _build_prompt(f"{row["title"]}\n{row["description"]}\n{row["text"]}")
     last_err: Optional[str] = None
     for attempt in range(retries + 1):
         try:
@@ -139,8 +124,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Generate images for recipes using gpt-image-1")
     src = parser.add_mutually_exclusive_group()
-    src.add_argument("--parquet", type=str, default="recipes.parquet", help="Parquet file containing recipes (id, text)")
-    src.add_argument("--json-dir", type=str, default=None, help="Directory of JSON recipe files")
+    src.add_argument("--json-dir", type=str, default="json_recipes", help="Directory of JSON recipe files")
 
     parser.add_argument("--images-dir", type=str, default="images", help="Output directory for images")
     parser.add_argument("--format", type=str, default="jpg", choices=["png", "jpg", "jpeg"], help="Image file format")
@@ -165,20 +149,10 @@ def main():
             print(f"JSON directory not found: {dir_path}", file=sys.stderr)
             sys.exit(1)
         df = _load_from_json_dir(dir_path)
-    else:
-        pq_path = Path(args.parquet)
-        if not pq_path.exists():
-            print(f"Parquet file not found: {pq_path}", file=sys.stderr)
-            sys.exit(1)
-        df = _load_from_parquet(pq_path)
 
     if df is None or df.empty:
         print("No recipes found to generate images.")
         sys.exit(0)
-
-    # Select columns
-    cols = [c for c in ["id", "title", "text"] if c in df.columns]
-    df = df[cols].copy()
 
     # Apply limit
     if args.limit is not None and args.limit >= 0:
