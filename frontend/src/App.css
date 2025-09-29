@@ -455,7 +455,7 @@
   font-size: 0.95rem;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 600px) {
   .app {
     padding: 2rem 1.1rem 3rem;
   }

@@ -392,7 +392,7 @@ function RecipeCard({ recipe, onSelect }: { recipe: Recipe; onSelect: (id: strin
     const isMobile =
       typeof window !== "undefined" &&
       "matchMedia" in window &&
-      window.matchMedia("(max-width: 720px)").matches;
+      window.matchMedia("(max-width: 600px)").matches;
     if (isMobile) {
       const lang = (recipe.language as LanguageCode) || DEFAULT_LANGUAGE;
       const href = buildRecipePageUrl(recipe.id, lang);
