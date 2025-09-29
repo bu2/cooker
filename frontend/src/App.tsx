@@ -99,6 +99,19 @@ function resolveLanguageMetadata(
   return LANGUAGE_METADATA[base];
 }
 
+function getLanguageName(code: LanguageCode): string {
+  const normalized = normalizeLanguageCode(code);
+  const meta = resolveLanguageMetadata(normalized);
+  if (meta?.nativeName) return meta.nativeName;
+  const [base] = normalized.split("-");
+  return (
+    FALLBACK_LANGUAGE_NAMES[normalized] ||
+    FALLBACK_LANGUAGE_NAMES[base] ||
+    base ||
+    normalized
+  );
+}
+
 function getLanguageFlag(code: string): string {
   const metadata = resolveLanguageMetadata(code);
   if (metadata?.flag) {
@@ -381,7 +394,15 @@ function MarkdownContent({ text }: { text: string }) {
   return <div className="modal__markdown">{nodes}</div>;
 }
 
-function RecipeCard({ recipe, onSelect }: { recipe: Recipe; onSelect: (id: string) => void }) {
+function RecipeCard({
+  recipe,
+  onSelect,
+  isMobile,
+}: {
+  recipe: Recipe;
+  onSelect: (id: string) => void;
+  isMobile: boolean;
+}) {
   const imageUrl = buildImageUrl(recipe.image_url);
   const fallbackColor = useMemo(
     () => PLACEHOLDER_COLORS[recipe.id.charCodeAt(0) % PLACEHOLDER_COLORS.length],
@@ -389,10 +410,6 @@ function RecipeCard({ recipe, onSelect }: { recipe: Recipe; onSelect: (id: strin
   );
 
   const handleClick = () => {
-    const isMobile =
-      typeof window !== "undefined" &&
-      "matchMedia" in window &&
-      window.matchMedia("(max-width: 600px)").matches;
     if (isMobile) {
       const lang = (recipe.language as LanguageCode) || DEFAULT_LANGUAGE;
       const href = buildRecipePageUrl(recipe.id, lang);
@@ -473,8 +490,6 @@ function App() {
   const [availableLanguages, setAvailableLanguages] = useState<LanguageCode[]>([DEFAULT_LANGUAGE]);
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
   const activeQueryRef = useRef<string | null>(null);
-  const languageRef = useRef(language);
-  const nativeNameCache = useRef<Map<string, string>>(new Map());
   const bootstrappedRef = useRef(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
@@ -506,79 +521,14 @@ function App() {
     []
   );
 
-  const languageDisplayNames = useMemo(() => {
-    try {
-      return new Intl.DisplayNames([navigator.language || "en"], { type: "language" });
-    } catch (err) {
-      return null;
-    }
-  }, []);
-
-  const getNativeLanguageName = useCallback(
-    (code: LanguageCode) => {
-      const cached = nativeNameCache.current.get(code);
-      if (cached) {
-        return cached;
-      }
-
-      const metadata = resolveLanguageMetadata(code);
-      if (metadata?.nativeName) {
-        nativeNameCache.current.set(code, metadata.nativeName);
-        return metadata.nativeName;
-      }
-
-      const normalized = normalizeLanguageCode(code);
-      const [base] = normalized.split("-");
-      const candidateLocales = Array.from(new Set([normalized, base].filter(Boolean)));
-
-      for (const locale of candidateLocales) {
-        try {
-          const nativeDisplayNames = new Intl.DisplayNames([locale], { type: "language" });
-          const native = nativeDisplayNames.of(code);
-          if (native && native.toLowerCase() !== code.toLowerCase()) {
-            nativeNameCache.current.set(code, native);
-            return native;
-          }
-        } catch (err) {
-          // ignore unsupported locale
-        }
-      }
-
-      for (const locale of candidateLocales) {
-        const fallback = FALLBACK_LANGUAGE_NAMES[locale];
-        if (fallback) {
-          nativeNameCache.current.set(code, fallback);
-          return fallback;
-        }
-      }
-
-      if (languageDisplayNames) {
-        const localized = languageDisplayNames.of(code);
-        if (localized && localized.toLowerCase() !== code.toLowerCase()) {
-          nativeNameCache.current.set(code, localized);
-          return localized;
-        }
-      }
-
-      nativeNameCache.current.set(code, code);
-      return code;
-    },
-    [languageDisplayNames]
-  );
-
   const formatLanguage = useCallback(
     (code: LanguageCode) => {
-      // On mobile, show only the 2-letter ISO code
       const flag = getLanguageFlag(code);
-      var lang;
-      if (isMobile) {
-        lang = normalizeLanguageCode(code).split("-")[0];
-      } else {
-        lang = getNativeLanguageName(code);
-      }
-      return `${flag} ${lang}`;
+      const base = normalizeLanguageCode(code).split("-")[0];
+      const label = isMobile ? base : getLanguageName(code);
+      return `${flag} ${label}`;
     },
-    [getNativeLanguageName, isMobile]
+    [isMobile]
   );
 
   // Track mobile viewport to adjust language selector labeling
@@ -600,10 +550,6 @@ function App() {
   useEffect(() => {
     activeQueryRef.current = activeQuery;
   }, [activeQuery]);
-
-  useEffect(() => {
-    languageRef.current = language;
-  }, [language]);
 
   const loadRecipesForLanguage = useCallback(async (lang: LanguageCode) => {
     setLoading(true);
@@ -722,8 +668,7 @@ function App() {
           return;
         }
         setAvailableLanguages(langs);
-        const currentLanguage = languageRef.current;
-        if (!langs.includes(currentLanguage)) {
+        if (!langs.includes(language)) {
           const nextLanguage = langs[0];
           if (nextLanguage) {
             await applyLanguageChange(nextLanguage);
@@ -743,7 +688,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [applyLanguageChange]);
+  }, [applyLanguageChange, language]);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -872,7 +817,7 @@ function App() {
         <>
           <section className="grid">
             {recipes.map((recipe) => (
-              <RecipeCard key={recipe.id} recipe={recipe} onSelect={handleSelect} />
+              <RecipeCard key={recipe.id} recipe={recipe} onSelect={handleSelect} isMobile={isMobile} />
             ))}
           </section>
           {selected && <RecipeModal recipe={selected} onClose={clearSelection} />}
