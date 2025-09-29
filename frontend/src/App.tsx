@@ -799,7 +799,7 @@ function App() {
       <header className="app__header">
         <div className="app__header-top">
           <div>
-            <h1>LaTambouille.fr</h1>
+            <h1>La Tambouille</h1>
             <p className="app__subtitle">
               La cuisine française traditionnelle dans votre assiette.
             </p>
