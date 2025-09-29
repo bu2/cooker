@@ -1,13 +1,10 @@
 backend/__pycache__/
+data/
 frontend/dist/
 frontend/node_modules/
-images/
-json_recipes/
 recipes.db/
-translated_recipes/
 
 .DS_Store
 images*.tar.gz
 projector_metadata.tsv
 projector_vectors.tsv
-recipes.parquet

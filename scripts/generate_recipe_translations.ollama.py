@@ -154,8 +154,8 @@ def main() -> None:
     args = parser.parse_args()
 
     model = os.environ.get("OLLAMA_MODEL", TRANSLATOR_LLM)
-    source_dir = os.environ.get("RECIPES_DIR", "json_recipes")
-    output_dir = os.environ.get("OUTPUT_DIR", "translated_recipes")
+    source_dir = os.environ.get("RECIPES_DIR", "data/json_recipes")
+    output_dir = os.environ.get("OUTPUT_DIR", "data/translated_recipes")
     env_languages = os.environ.get("TRANSLATION_LANGUAGES")
 
     languages: List[str] = []

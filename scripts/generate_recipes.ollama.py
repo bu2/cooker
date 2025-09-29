@@ -61,7 +61,7 @@ def generate_recipe_text(model: str, title: str, description: str) -> str:
 
 def main():
     model = os.environ.get("OLLAMA_MODEL", CHEF_LLM)
-    output_dir = os.environ.get("OUTPUT_DIR", "json_recipes")
+    output_dir = os.environ.get("OUTPUT_DIR", "data/json_recipes")
     os.makedirs(output_dir, exist_ok=True)
 
     recipes = pd.read_csv('recipes.csv')

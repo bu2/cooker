@@ -13,8 +13,8 @@ Notes
 
 Usage examples
   python scripts/generate_recipe_images.py
-  python scripts/generate_recipe_images.py --images-dir images
-  python scripts/generate_recipe_images.py --json-dir json_recipes --overwrite
+  python scripts/generate_recipe_images.py --images-dir data/images
+  python scripts/generate_recipe_images.py --json-dir data/json_recipes --overwrite
 """
 
 from __future__ import annotations
@@ -99,9 +99,9 @@ def main():
 
     parser = argparse.ArgumentParser(description="Generate images for recipes using gpt-image-1")
     src = parser.add_mutually_exclusive_group()
-    src.add_argument("--json-dir", type=str, default="json_recipes", help="Directory of JSON recipe files")
+    src.add_argument("--json-dir", type=str, default="data/json_recipes", help="Directory of JSON recipe files")
 
-    parser.add_argument("--images-dir", type=str, default="images", help="Output directory for images")
+    parser.add_argument("--images-dir", type=str, default="data/images", help="Output directory for images")
     parser.add_argument("--format", type=str, default="jpg", choices=["png", "jpg", "jpeg"], help="Image file format")
     parser.add_argument("--size", type=str, default="1024x1024", help="Image size, e.g., 1024x1024 or 1536x1024 or 1024x1536")
     parser.add_argument("--quality", type=str, default="low", choices=["low", "medium", "high", "auto"], help="Image quality for generation")

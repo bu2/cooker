@@ -4,7 +4,7 @@ using sentence-transformers.
 
 Usage examples:
   python scripts/embed_recipes.py
-  python scripts/embed_recipes.py --input-dir json_recipes --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  python scripts/embed_recipes.py --input-dir data/json_recipes --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
 Notes:
 - Install dependencies: pip install pandas sentence-transformers tiktoken
@@ -77,7 +77,7 @@ def main():
     _require_deps()
 
     parser = argparse.ArgumentParser(description="Load recipe JSON, count tokens, and embed text with sentence-transformers.")
-    parser.add_argument("--input-dir", default="json_recipes", type=str, help="Directory containing recipe JSON files")
+    parser.add_argument("--input-dir", default="data/json_recipes", type=str, help="Directory containing recipe JSON files")
     parser.add_argument(
         "--model",
         default="Snowflake/snowflake-arctic-embed-l-v2.0",
@@ -149,8 +149,8 @@ def main():
     dim = len(first_vec) if isinstance(first_vec, list) else None
     print(f"Embeddings created. Dimension: {dim}. DataFrame shape: {df.shape}")
 
-    df.to_parquet('recipes.parquet')
-    print('Results saved to recipes.parquet.')
+    df.to_parquet('data/recipes.parquet')
+    print('Results saved to data/recipes.parquet.')
 
 
 if __name__ == "__main__":

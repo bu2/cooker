@@ -375,7 +375,7 @@ def main():
     args = parser.parse_args()
 
     model = os.environ.get("MISTRAL_MODEL", CHEF_LLM)
-    output_dir = os.environ.get("OUTPUT_DIR", "json_recipes")
+    output_dir = os.environ.get("OUTPUT_DIR", "data/json_recipes")
     os.makedirs(output_dir, exist_ok=True)
 
     api_key = os.environ.get(API_KEY_ENV)

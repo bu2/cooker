@@ -20,11 +20,11 @@ except Exception:  # pragma: no cover - optional dependency handled at runtime
     lancedb = None  # type: ignore
 
 
-DEFAULT_PARQUET = os.environ.get("RECIPES_PARQUET", "recipes.parquet")
-DEFAULT_LANCEDB_URI = os.environ.get("RECIPES_LANCEDB", "recipes.db")
+DEFAULT_PARQUET = os.environ.get("RECIPES_PARQUET", "data/recipes.parquet")
+DEFAULT_LANCEDB_URI = os.environ.get("RECIPES_LANCEDB", "data/recipes.db")
 DEFAULT_TABLE = os.environ.get("RECIPES_TABLE", "recipes")
-DEFAULT_IMAGES_DIR = os.environ.get("RECIPES_IMAGES", "images")
-DEFAULT_TRANSLATIONS_DIR = os.environ.get("RECIPES_TRANSLATIONS", "translated_recipes")
+DEFAULT_IMAGES_DIR = os.environ.get("RECIPES_IMAGES", "data/images")
+DEFAULT_TRANSLATIONS_DIR = os.environ.get("RECIPES_TRANSLATIONS", "data/translated_recipes")
 
 DEFAULT_LANGUAGE = "fr"
 RECIPE_FIELDS = ("title", "description", "text")

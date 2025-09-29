@@ -7,7 +7,7 @@ Outputs
 
 Usage
   python scripts/export_to_tf_embedding_projector.py \
-      --parquet recipes.parquet \
+      --parquet data/recipes.parquet \
       --vectors-tsv projector_vectors.tsv \
       --metadata-tsv projector_metadata.tsv \
       --meta-cols title id n_tokens
@@ -73,7 +73,7 @@ def main():
     import pandas as pd
 
     parser = argparse.ArgumentParser(description="Export embeddings and metadata to TSV for TF Embedding Projector")
-    parser.add_argument("--parquet", default="recipes.parquet", type=str, help="Input Parquet file with 'embedding' column")
+    parser.add_argument("--parquet", default="data/recipes.parquet", type=str, help="Input Parquet file with 'embedding' column")
     parser.add_argument("--vectors-tsv", default="projector_vectors.tsv", type=str, help="Output TSV file for vectors (no header)")
     parser.add_argument("--metadata-tsv", default="projector_metadata.tsv", type=str, help="Output TSV file for metadata (with header)")
     parser.add_argument(

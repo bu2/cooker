@@ -9,18 +9,18 @@
 - Ensure Ollama is installed and running if using local LLM generation.
 
 **Step 1 — Generate**
-- Purpose: Create JSON files in `json_recipes/` from titles in `recipes.txt` using an Ollama chat model.
+- Purpose: Create JSON files in `data/json_recipes/` from titles in `recipes.txt` using an Ollama chat model.
 - Command: `python scripts/generate_recipes.ollama.py`
 - Environment options:
   - `OLLAMA_MODEL` to choose the Ollama model (default `mistral-small`). Example: ``export OLLAMA_MODEL=mistral``
-  - `OUTPUT_DIR` to change output directory (default `json_recipes`).
-- Output: One JSON per recipe title: `json_recipes/<hash>.json` with keys `title`, `text`.
+  - `OUTPUT_DIR` to change output directory (default `data/json_recipes`).
+- Output: One JSON per recipe title: `data/json_recipes/<hash>.json` with keys `title`, `text`.
 
 **Step 2 — Embed**
 - Purpose: Load JSON recipes and generate vector embeddings.
 - Command: `python scripts/embed_recipes.py`
 - Useful options:
-  - `--input-dir json_recipes` to read a different folder.
+  - `--input-dir data/json_recipes` to read a different folder.
   - `--model Snowflake/snowflake-arctic-embed-l-v2.0` to pick the SentenceTransformers model.
   - `--batch-size 32` and `--no-normalize` to tune embedding.
 - Output: Writes a Parquet dataset `recipes.parquet` containing `id`, `title`, `text`, `path`, `embedding`.
@@ -38,26 +38,26 @@ Note: Use `dot` when your embeddings are unit‑normalized (Step 2 normalizes by
 
 **Recipe Gallery Web App**
 - Backend (FastAPI):
-  - Install deps: `pip install -r gallery_backend/requirements.txt`
+  - Install deps: `pip install -r backend/requirements.txt`
   - Optional env vars:
     - `RECIPES_PARQUET` (default `recipes.parquet`)
     - `RECIPES_LANCEDB` (default `recipes.db`)
     - `RECIPES_TABLE` (default `recipes`)
-    - `RECIPES_IMAGES` (default `recipe_images`) for generated pictures
-  - Run locally: `uvicorn gallery_backend.main:app --reload`
+    - `RECIPES_IMAGES` (default `data/images`) for generated pictures
+  - Run locally: `uvicorn backend.main:app --reload`
   - Static images served at `/images/<recipe-id>.png` if files exist.
 - Frontend (Vite + React):
-  - `cd gallery_frontend`
+  - `cd frontend`
   - `npm install`
   - Start dev server: `npm run dev` (default http://localhost:5173)
   - Configure backend URL via `.env` (e.g., `VITE_API_BASE_URL=http://localhost:8000`).
 - Features: list recipes, search via LanceDB full-text index, view full recipe & image in modal.
-- Build for production: `npm run build` → static assets in `gallery_frontend/dist/`.
+- Build for production: `npm run build` → static assets in `frontend/dist/`.
 
 **Files**
 - `recipes.txt`: One recipe title per line.
-- `json_recipes/`: Generated JSON recipes from Step 1.
-- `recipes.parquet`: Embedded dataset from Step 2.
+- `data/json_recipes/`: Generated JSON recipes from Step 1.
+- `data/recipes.parquet`: Embedded dataset from Step 2.
 - `recipes.db/`: LanceDB database created in Step 3.
 
 **Troubleshooting**

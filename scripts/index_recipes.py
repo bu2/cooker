@@ -13,7 +13,7 @@ What it does
 
 Usage
   pip install lancedb pandas pyarrow
-  python scripts/index_recipes.py --parquet recipes.parquet --db ./recipes.db --table recipes --overwrite
+  python scripts/index_recipes.py --parquet data/recipes.parquet --db ./recipes.db --table recipes --overwrite
 
 Notes
 - Requires a recent LanceDB version with IVF_FLAT vector indexing and Tantivy-based FTS.
@@ -85,7 +85,7 @@ def main():
     import lancedb
 
     parser = argparse.ArgumentParser(description="Index recipes in LanceDB from a Parquet file")
-    parser.add_argument("--parquet", default='recipes.parquet', help="Path to recipes.parquet with 'embedding' column")
+    parser.add_argument("--parquet", default='data/recipes.parquet', help="Path to recipes.parquet with 'embedding' column")
     parser.add_argument("--db", default="./recipes.db", help="Directory to store LanceDB database")
     parser.add_argument("--table", default="recipes", help="LanceDB table name")
     parser.add_argument(
