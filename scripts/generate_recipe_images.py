@@ -2,7 +2,7 @@
 Generate a picture for each recipe using OpenAI's gpt-image-1.
 
 Behavior
-- Reads recipes from a Parquet file (default: recipes.parquet) or JSON files in a directory.
+- Reads recipes from JSON files in a directory.
 - For each recipe, generates one image using the recipe text plus an instruction:
   "Generate a picture of the recipe as if it was in your plate."
 - Saves images to an output directory using the recipe ID as filename.
@@ -10,21 +10,17 @@ Behavior
 Notes
 - Requires: pip install openai pandas pyarrow
 - Set OPENAI_API_KEY in your environment for authentication.
-- The OpenAI Batch API does not currently support image generation; this script will
-  fall back to concurrent requests even if --use-batch is provided.
 
 Usage examples
   python scripts/generate_recipe_images.py
-  python scripts/generate_recipe_images.py --parquet recipes.parquet --images-dir recipe_images
+  python scripts/generate_recipe_images.py --images-dir images
   python scripts/generate_recipe_images.py --json-dir json_recipes --overwrite
-  python scripts/generate_recipe_images.py --concurrency 4 --size 512x512
 """
 
 from __future__ import annotations
 
 import argparse
 import base64
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import sys
@@ -96,27 +92,6 @@ def _save_image(path: Path, data: bytes) -> None:
         f.write(data)
 
 
-def _worker(client, row: Dict[str, Any], outdir: Path, size: str, quality: str, fmt: str, overwrite: bool, retries: int) -> Tuple[str, bool, Optional[str]]:
-    rid = str(row.get("id", "")).strip() or str(row.get("title", "")).strip()
-    if not rid:
-        return ("<missing-id>", False, "missing id/title")
-    filename = f"{rid}.{fmt}"
-    out_path = outdir / filename
-    if out_path.exists() and not overwrite:
-        return (rid, True, "skipped (exists)")
-
-    prompt = _build_prompt(f"{row["title"]}\n{row["description"]}\n{row["text"]}")
-    last_err: Optional[str] = None
-    for attempt in range(retries + 1):
-        try:
-            img = _gen_image_bytes(client, prompt=prompt, size=size, quality=quality)
-            _save_image(out_path, img)
-            return (rid, True, None)
-        except Exception as e:
-            last_err = str(e)
-    return (rid, False, last_err)
-
-
 def main():
     _require_deps()
     from openai import OpenAI
@@ -132,9 +107,7 @@ def main():
     parser.add_argument("--quality", type=str, default="low", choices=["low", "medium", "high", "auto"], help="Image quality for generation")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing image files")
     parser.add_argument("--limit", type=int, default=None, help="Optional max number of images to generate")
-    parser.add_argument("--concurrency", type=int, default=4, help="Parallel request workers")
-    parser.add_argument("--retries", type=int, default=2, help="Retry attempts per image on failure")
-    parser.add_argument("--use-batch", action="store_true", help="Attempt to use OpenAI Batch API (falls back to concurrency)")
+
 
     args = parser.parse_args()
 
@@ -161,41 +134,33 @@ def main():
     total = len(df)
     print(f"Generating images for {total} recipes → {outdir} (size={args.size}, quality={args.quality})")
 
-    if args.use_batch:
-        print("Note: OpenAI Batch API does not support images; using concurrent requests instead.")
-
     client = OpenAI()
-
     successes = 0
     skips = 0
     failures: List[Tuple[str, Optional[str]]] = []
 
-    # Kick off workers
-    with ThreadPoolExecutor(max_workers=max(1, int(args.concurrency))) as ex:
-        futures = [
-            ex.submit(
-                _worker,
-                client,
-                row._asdict() if hasattr(row, "_asdict") else row.to_dict(),
-                outdir,
-                args.size,
-                args.quality,
-                args.format if args.format != "jpeg" else "jpg",
-                args.overwrite,
-                args.retries,
-            )
-            for _, row in df.iterrows()
-        ]
-        for fut in as_completed(futures):
-            rid, ok, err = fut.result()
-            if ok and err is None:
-                successes += 1
-                if successes % 10 == 0:
-                    print(f"  {successes}/{total} done…")
-            elif ok and err and "skipped" in err:
-                skips += 1
-            else:
-                failures.append((rid, err))
+    img_fmt = args.format if args.format != "jpeg" else "jpg"
+
+    for _, row in df.iterrows():
+        rid = str(row.get("id", "")).strip() or str(row.get("title", "")).strip()
+        if not rid:
+            failures.append(("<missing-id>", "missing id/title"))
+            continue
+
+        out_path = outdir / f"{rid}.{img_fmt}"
+        if out_path.exists() and not args.overwrite:
+            print(f"Skip {row["title"]} ({out_path})...")
+            skips += 1
+            continue
+
+        print(f"Generate image for {row["title"]} ({rid})...")
+        prompt = _build_prompt(f"{row['title']}\n{row['description']}\n{row['text']}")
+        try:
+            img = _gen_image_bytes(client, prompt=prompt, size=args.size, quality=args.quality)
+            _save_image(out_path, img)
+            successes += 1
+        except Exception as e:
+            failures.append((rid, str(e)))
 
     print(f"Done. Generated: {successes}, Skipped: {skips}, Failed: {len(failures)}")
     if failures:
