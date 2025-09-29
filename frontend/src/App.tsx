@@ -427,17 +427,8 @@ function RecipeModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
   return (
     <div className="modal__backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal__close" onClick={onClose}>
-          ×
-        </button>
-        <header className="modal__header">
-          <div className="modal__header-info">
-            <h2 className="modal__title">{recipe.title || recipe.id}</h2>
-            {recipe.n_tokens != null && (
-              <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>
-            )}
-          </div>
-          <a
+        <div>
+        <a
             className="modal__open"
             href={buildRecipePageUrl(
               recipe.id,
@@ -448,7 +439,18 @@ function RecipeModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
             aria-label="Open recipe in a new tab"
           >
             Open in new tab ↗
-          </a>
+        </a>
+        <button className="modal__close" onClick={onClose}>
+          ×
+        </button>
+        </div>
+        <header className="modal__header">
+          <div className="modal__header-info">
+            <h2 className="modal__title">{recipe.title || recipe.id}</h2>
+            {recipe.n_tokens != null && (
+              <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>
+            )}
+          </div>
         </header>
         {imageUrl && (
           <img src={imageUrl} alt={recipe.title ?? recipe.id} className="modal__image" />
@@ -749,14 +751,7 @@ function App() {
     void applyLanguageChange(nextLanguage);
   };
 
-  const handleReset = () => {
-    setQuery("");
-    void (async () => {
-      await loadRecipesForLanguage(language);
-      setActiveQuery(null);
-      setURLParams(language, null, null);
-    })();
-  };
+  
 
   const clearSelection = () => {
     setSelected(null);
@@ -796,10 +791,6 @@ function App() {
                   onChange={(event) => setQuery(event.target.value)}
                   aria-label="Search recipes"
                 />
-                <button type="submit">Search</button>
-                <button type="button" className="search__reset" onClick={handleReset}>
-                  Reset
-                </button>
               </form>
             )}
             <div className="language-switcher">
