@@ -782,7 +782,7 @@ function App() {
         <div>
           <h1>LaTambouille.fr</h1>
           <p className="app__subtitle">
-            La Cuisine Française traditionnelle dans votre assiette.
+            La cuisine française traditionnelle dans votre assiette.
           </p>
         </div>
         <div className="app__actions">
