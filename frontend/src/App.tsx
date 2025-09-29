@@ -779,42 +779,44 @@ function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <div>
-          <h1>LaTambouille.fr</h1>
-          <p className="app__subtitle">
-            La cuisine française traditionnelle dans votre assiette.
-          </p>
-        </div>
-        <div className="app__actions">
-          <div className="language-switcher">
-            <select
-              id="language-select"
-              value={language}
-              onChange={handleLanguageChange}
-              disabled={availableLanguages.length <= 1}
-            >
-              {availableLanguages.map((code) => (
-                <option key={code} value={code}>
-                  {formatLanguage(code)}
-                </option>
-              ))}
-            </select>
+        <div className="app__header-top">
+          <div>
+            <h1>LaTambouille.fr</h1>
+            <p className="app__subtitle">
+              La cuisine française traditionnelle dans votre assiette.
+            </p>
           </div>
-          {!isStandalone && (
-            <form className="search" onSubmit={handleSearch}>
-              <input
-                type="search"
-                placeholder="Rechercher..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                aria-label="Search recipes"
-              />
-              <button type="submit">Search</button>
-              <button type="button" className="search__reset" onClick={handleReset}>
-                Reset
-              </button>
-            </form>
-          )}
+          <div className="app__actions">
+            {!isStandalone && (
+              <form className="search" onSubmit={handleSearch}>
+                <input
+                  type="search"
+                  placeholder="Rechercher..."
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  aria-label="Search recipes"
+                />
+                <button type="submit">Search</button>
+                <button type="button" className="search__reset" onClick={handleReset}>
+                  Reset
+                </button>
+              </form>
+            )}
+            <div className="language-switcher">
+              <select
+                id="language-select"
+                value={language}
+                onChange={handleLanguageChange}
+                disabled={availableLanguages.length <= 1}
+              >
+                {availableLanguages.map((code) => (
+                  <option key={code} value={code}>
+                    {formatLanguage(code)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </header>
 
