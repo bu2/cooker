@@ -476,6 +476,7 @@ function App() {
   const languageRef = useRef(language);
   const nativeNameCache = useRef<Map<string, string>>(new Map());
   const bootstrappedRef = useRef(false);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   const setURLParams = useCallback(
     (lang: LanguageCode, q: string | null | undefined, id?: string | null) => {
@@ -567,12 +568,34 @@ function App() {
 
   const formatLanguage = useCallback(
     (code: LanguageCode) => {
+      // On mobile, show only the 2-letter ISO code
       const flag = getLanguageFlag(code);
-      const native = getNativeLanguageName(code);
-      return `${flag} ${native}`;
+      var lang;
+      if (isMobile) {
+        lang = normalizeLanguageCode(code).split("-")[0];
+      } else {
+        lang = getNativeLanguageName(code);
+      }
+      return `${flag} ${lang}`;
     },
-    [getNativeLanguageName]
+    [getNativeLanguageName, isMobile]
   );
+
+  // Track mobile viewport to adjust language selector labeling
+  useEffect(() => {
+    if (typeof window === "undefined" || !("matchMedia" in window)) return;
+    const mql = window.matchMedia("(max-width: 600px)");
+    const update = () => setIsMobile(mql.matches);
+    update();
+    // Older Safari uses addListener/removeListener
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", update);
+      return () => mql.removeEventListener("change", update);
+    } else if (typeof mql.addListener === "function") {
+      mql.addListener(update);
+      return () => mql.removeListener(update);
+    }
+  }, []);
 
   useEffect(() => {
     activeQueryRef.current = activeQuery;

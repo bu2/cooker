@@ -463,4 +463,9 @@
   .app__header h1 {
     font-size: 2rem;
   }
+
+  /* Halve the language selector's minimum width on mobile */
+  .language-switcher select {
+    min-width: 2.5rem;
+  }
 }
