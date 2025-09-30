@@ -223,6 +223,7 @@ function buildRecipePageUrl(id: string, lang: LanguageCode): string {
     url.searchParams.set("id", id);
     // Keep permalinks clean: drop transient search query
     url.searchParams.delete("q");
+    url.searchParams.delete("preview");
     return url.toString();
   } catch {
     return `/?lang=${encodeURIComponent(normalizeLanguageCode(lang))}&id=${encodeURIComponent(id)}`;
@@ -490,7 +491,12 @@ function App() {
   const isMobile = useIsMobile();
 
   const setURLParams = useCallback(
-    (lang: LanguageCode, q: string | null | undefined, id?: string | null) => {
+    (
+      lang: LanguageCode,
+      q: string | null | undefined,
+      id?: string | null,
+      preview: boolean = false
+    ) => {
       try {
         const url = new URL(window.location.href);
         if (lang) {
@@ -503,8 +509,14 @@ function App() {
         }
         if (id && id.trim()) {
           url.searchParams.set("id", id);
+          if (preview) {
+            url.searchParams.set("preview", "true");
+          } else {
+            url.searchParams.delete("preview");
+          }
         } else {
           url.searchParams.delete("id");
+          url.searchParams.delete("preview");
         }
         const next = url.toString();
         if (next !== window.location.href) {
@@ -603,15 +615,22 @@ function App() {
     const urlLang = (url.searchParams.get("lang") || DEFAULT_LANGUAGE) as LanguageCode;
     const urlQueryRaw = url.searchParams.get("q") || "";
     const urlId = url.searchParams.get("id") || "";
+    const urlPreview = (url.searchParams.get("preview") || "").toLowerCase() === "true";
     const urlQuery = urlQueryRaw.trim();
 
     setLanguage(urlLang);
     setQuery(urlQueryRaw);
-    setIsStandalone(Boolean(urlId));
+    // When preview=true is present with an id, show gallery + modal (not standalone)
+    setIsStandalone(Boolean(urlId) && !urlPreview);
 
     const run = async () => {
       if (urlQuery) {
         await performSearch(urlQuery, urlLang);
+        // If the URL included a specific recipe id and preview state,
+        // preserve them alongside the active search parameters.
+        if (urlId) {
+          setURLParams(urlLang, urlQuery, urlId, urlPreview);
+        }
       } else {
         await loadRecipesForLanguage(urlLang);
         // Preserve id if present on initial load
@@ -682,7 +701,8 @@ function App() {
     try {
       const recipe = await fetchRecipeById(id, language);
       setSelected(recipe);
-      setURLParams(language, activeQueryRef.current, id);
+      // On desktop gallery selection, flag as a preview (modal state)
+      setURLParams(language, activeQueryRef.current, id, true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load recipe";
       setError(message);
