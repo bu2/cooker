@@ -717,6 +717,26 @@ function App() {
     void applyLanguageChange(nextLanguage);
   };
 
+  // Reset results when the search input is cleared (e.g., clicking the 'x')
+  const handleSearchChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setQuery(value);
+
+      if (value === "") {
+        // If we were viewing search results, restore the default list
+        if (activeQueryRef.current) {
+          void loadRecipesForLanguage(language);
+        }
+        // Remove the search query from the URL, preserve current selection state
+        const preserveId = selected?.id || null;
+        const preview = Boolean(selected) && !isStandalone;
+        setURLParams(language, null, preserveId, preview);
+      }
+    },
+    [language, loadRecipesForLanguage, selected, isStandalone, setURLParams]
+  );
+
   
 
   const clearSelection = () => {
@@ -754,7 +774,7 @@ function App() {
                   type="search"
                   placeholder="Rechercher..."
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={handleSearchChange}
                   aria-label="Search recipes"
                 />
               </form>
