@@ -99,6 +99,26 @@ function resolveLanguageMetadata(
   return LANGUAGE_METADATA[base];
 }
 
+function useIsMobile(query = "(max-width: 600px)") {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !("matchMedia" in window)) return;
+    const mql = window.matchMedia(query);
+    const update = () => setIsMobile(mql.matches);
+    update();
+    const anyMql = mql as any;
+    if (typeof anyMql.addEventListener === "function") {
+      anyMql.addEventListener("change", update);
+      return () => anyMql.removeEventListener("change", update);
+    }
+    if (typeof anyMql.addListener === "function") {
+      anyMql.addListener(update);
+      return () => anyMql.removeListener(update);
+    }
+  }, [query]);
+  return isMobile;
+}
+
 function getLanguageName(code: LanguageCode): string {
   const normalized = normalizeLanguageCode(code);
   const meta = resolveLanguageMetadata(normalized);
@@ -211,44 +231,13 @@ function buildRecipePageUrl(id: string, lang: LanguageCode): string {
 }
 
 function headingElement(level: number, key: string, children: ReactNode) {
-  switch (level) {
-    case 1:
-      return (
-        <h1 key={key} className="markdown__heading markdown__heading--h1">
-          {children}
-        </h1>
-      );
-    case 2:
-      return (
-        <h2 key={key} className="markdown__heading markdown__heading--h2">
-          {children}
-        </h2>
-      );
-    case 3:
-      return (
-        <h3 key={key} className="markdown__heading markdown__heading--h3">
-          {children}
-        </h3>
-      );
-    case 4:
-      return (
-        <h4 key={key} className="markdown__heading markdown__heading--h4">
-          {children}
-        </h4>
-      );
-    case 5:
-      return (
-        <h5 key={key} className="markdown__heading markdown__heading--h5">
-          {children}
-        </h5>
-      );
-    default:
-      return (
-        <h6 key={key} className="markdown__heading markdown__heading--h6">
-          {children}
-        </h6>
-      );
-  }
+  const lvl = Math.min(Math.max(level, 1), 6);
+  const Tag = (`h${lvl}` as unknown) as keyof JSX.IntrinsicElements;
+  return (
+    <Tag key={key} className={`markdown__heading markdown__heading--h${lvl}`}>
+      {children}
+    </Tag>
+  );
 }
 
 function parseMarkdown(markdown: string): ReactNode[] {
@@ -404,10 +393,9 @@ function RecipeCard({
   isMobile: boolean;
 }) {
   const imageUrl = buildImageUrl(recipe.image_url);
-  const fallbackColor = useMemo(
-    () => PLACEHOLDER_COLORS[recipe.id.charCodeAt(0) % PLACEHOLDER_COLORS.length],
-    [recipe.id]
-  );
+  const fallbackColor = PLACEHOLDER_COLORS[
+    recipe.id.charCodeAt(0) % PLACEHOLDER_COLORS.length
+  ];
 
   const handleClick = () => {
     if (isMobile) {
@@ -491,7 +479,7 @@ function App() {
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
   const activeQueryRef = useRef<string | null>(null);
   const bootstrappedRef = useRef(false);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const isMobile = useIsMobile();
 
   const setURLParams = useCallback(
     (lang: LanguageCode, q: string | null | undefined, id?: string | null) => {
@@ -531,25 +519,8 @@ function App() {
     [isMobile]
   );
 
-  // Track mobile viewport to adjust language selector labeling
-  useEffect(() => {
-    if (typeof window === "undefined" || !("matchMedia" in window)) return;
-    const mql = window.matchMedia("(max-width: 600px)");
-    const update = () => setIsMobile(mql.matches);
-    update();
-    // Older Safari uses addListener/removeListener
-    if (typeof mql.addEventListener === "function") {
-      mql.addEventListener("change", update);
-      return () => mql.removeEventListener("change", update);
-    } else if (typeof mql.addListener === "function") {
-      mql.addListener(update);
-      return () => mql.removeListener(update);
-    }
-  }, []);
-
-  useEffect(() => {
-    activeQueryRef.current = activeQuery;
-  }, [activeQuery]);
+  // Keep ref in sync for async callbacks without extra effect noise
+  activeQueryRef.current = activeQuery;
 
   const loadRecipesForLanguage = useCallback(async (lang: LanguageCode) => {
     setLoading(true);
@@ -791,7 +762,6 @@ function App() {
 
       {isStandalone ? (
         <section className="recipe-view">
-          {loading && <div className="alert">Loading…</div>}
           {selected && (
             <>
               <header className="modal__header">

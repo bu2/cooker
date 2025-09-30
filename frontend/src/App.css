@@ -56,9 +56,7 @@
   pointer-events: none;
 }
 
-.language-switcher label {
-  font-weight: 600;
-}
+/* No label element in markup; remove unused rule */
 
 .language-switcher select {
   border: none;
