@@ -215,7 +215,6 @@ function renderInline(text: string): ReactNode[] {
   return segments.length > 0 ? segments : [text];
 }
 
-// (duplicate removed)
 
 function buildRecipePageUrl(id: string, lang: LanguageCode): string {
   try {
@@ -232,7 +231,7 @@ function buildRecipePageUrl(id: string, lang: LanguageCode): string {
 
 function headingElement(level: number, key: string, children: ReactNode) {
   const lvl = Math.min(Math.max(level, 1), 6);
-  const Tag = (`h${lvl}` as unknown) as keyof JSX.IntrinsicElements;
+  const Tag = `h${lvl}` as keyof JSX.IntrinsicElements;
   return (
     <Tag key={key} className={`markdown__heading markdown__heading--h${lvl}`}>
       {children}
@@ -449,20 +448,29 @@ function RecipeModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
           ×
         </button>
         </div>
-        <header className="modal__header">
-          <div className="modal__header-info">
-            <h2 className="modal__title">{recipe.title || recipe.id}</h2>
-            {recipe.n_tokens != null && (
-              <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>
-            )}
-          </div>
-        </header>
-        {imageUrl && (
-          <img src={imageUrl} alt={recipe.title ?? recipe.id} className="modal__image" />
-        )}
-        <MarkdownContent text={recipe.text} />
+        <RecipeContent recipe={recipe} />
       </div>
     </div>
+  );
+}
+
+function RecipeContent({ recipe }: { recipe: Recipe }) {
+  const imageUrl = buildImageUrl(recipe.image_url);
+  return (
+    <>
+      <header className="modal__header">
+        <div className="modal__header-info">
+          <h2 className="modal__title">{recipe.title || recipe.id}</h2>
+          {recipe.n_tokens != null && (
+            <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>
+          )}
+        </div>
+      </header>
+      {imageUrl && (
+        <img src={imageUrl} alt={recipe.title ?? recipe.id} className="modal__image" />
+      )}
+      <MarkdownContent text={recipe.text} />
+    </>
   );
 }
 
@@ -519,7 +527,6 @@ function App() {
     [isMobile]
   );
 
-  // Keep ref in sync for async callbacks without extra effect noise
   activeQueryRef.current = activeQuery;
 
   const loadRecipesForLanguage = useCallback(async (lang: LanguageCode) => {
@@ -560,13 +567,13 @@ function App() {
       setLanguage(nextLanguage);
       setError(null);
 
-      const keepRecipe = isStandalone && selected?.id;
-      if (keepRecipe) {
+      const selectedId = selected?.id;
+      if (isStandalone && selectedId) {
         try {
           setLoading(true);
-          const updated = await fetchRecipeById(selected!.id, nextLanguage);
+          const updated = await fetchRecipeById(selectedId, nextLanguage);
           setSelected(updated);
-          setURLParams(nextLanguage, activeQueryRef.current, selected!.id);
+          setURLParams(nextLanguage, activeQueryRef.current, selectedId);
         } catch (err) {
           const message = err instanceof Error ? err.message : "Failed to load recipe";
           setError(message);
@@ -762,26 +769,7 @@ function App() {
 
       {isStandalone ? (
         <section className="recipe-view">
-          {selected && (
-            <>
-              <header className="modal__header">
-                <div className="modal__header-info">
-                  <h2 className="modal__title">{selected.title || selected.id}</h2>
-                  {selected.n_tokens != null && (
-                    <p className="modal__tokens">Tokens: {selected.n_tokens.toLocaleString()}</p>
-                  )}
-                </div>
-              </header>
-              {buildImageUrl(selected.image_url) && (
-                <img
-                  src={buildImageUrl(selected.image_url)}
-                  alt={selected.title ?? selected.id}
-                  className="modal__image"
-                />
-              )}
-              <MarkdownContent text={selected.text} />
-            </>
-          )}
+          {selected && <RecipeContent recipe={selected} />}
         </section>
       ) : (
         <>

@@ -56,7 +56,6 @@
   pointer-events: none;
 }
 
-/* No label element in markup; remove unused rule */
 
 .language-switcher select {
   border: none;
@@ -105,7 +104,6 @@
   box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.06);
 }
 
-/* Search has only an input for now; remove unused button styles */
 
 .alert {
   margin: 1.5rem 0;
@@ -261,7 +259,6 @@
   gap: 1.25rem;
 }
 
-/* Deduplicate modal header and action styles */
 
 .modal__header {
   display: flex;
