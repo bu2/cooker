@@ -1,4 +1,8 @@
-"""FastAPI backend serving recipe data and search powered by LanceDB."""
+"""FastAPI backend for recipes with optional LanceDB search.
+
+This module keeps a single `RecipeStore` responsible for loading data,
+handling translations, and performing localized lookups.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +10,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+import warnings
 
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -37,7 +42,7 @@ class Recipe(BaseModel):
     text: str
     image_url: Optional[str] = None
     n_tokens: Optional[int] = None
-    language: str = "fr"
+    language: str = DEFAULT_LANGUAGE
 
 
 class RecipeListResponse(BaseModel):
@@ -113,7 +118,9 @@ class RecipeStore:
                 db = lancedb.connect(str(lancedb_uri))
                 self.table = db.open_table(table_name)
             except Exception as exc:  # pragma: no cover - optional path
-                print(f"Warning: Unable to open LanceDB table '{table_name}': {exc}")
+                warnings.warn(
+                    f"Unable to open LanceDB table '{table_name}': {exc}"
+                )
                 self.table = None
 
     # Helper -----------------------------------------------------------------
@@ -183,36 +190,31 @@ class RecipeStore:
                 languages.add(lang)
         return languages
 
-    def normalize_language(self, lang: Optional[str]) -> str:
-        return self._normalize_language(lang)
+    @staticmethod
+    def _unique_preserve_order(values: List[str]) -> List[str]:
+        seen: Set[str] = set()
+        out: List[str] = []
+        for v in values:
+            if v not in seen:
+                out.append(v)
+                seen.add(v)
+        return out
 
-    def _normalize_language(self, lang: Optional[str]) -> str:
+    def normalize_language(self, lang: Optional[str]) -> str:
         if not lang:
             return self.default_language
         normalized = lang.lower()
-        if normalized in self.supported_languages:
-            return normalized
-        return self.default_language
+        return normalized if normalized in self.supported_languages else self.default_language
 
     def _language_preference(self, primary: str) -> List[str]:
         preferences = [primary, self.default_language, "en", *sorted(self.supported_languages)]
-        ordered: List[str] = []
-        seen: Set[str] = set()
-        for code in preferences:
-            if code in self.supported_languages and code not in seen:
-                ordered.append(code)
-                seen.add(code)
-        return ordered
+        filtered = [c for c in preferences if c in self.supported_languages]
+        return self._unique_preserve_order(filtered)
 
     def get_supported_languages(self) -> List[str]:
         preferences = [self.default_language, "en", *sorted(self.supported_languages)]
-        ordered: List[str] = []
-        seen: Set[str] = set()
-        for code in preferences:
-            if code in self.supported_languages and code not in seen:
-                ordered.append(code)
-                seen.add(code)
-        return ordered
+        filtered = [c for c in preferences if c in self.supported_languages]
+        return self._unique_preserve_order(filtered)
 
     def _attach_image_url(self, row: Dict[str, Any]) -> Dict[str, Any]:
         if not self.images_dir:
@@ -246,7 +248,7 @@ class RecipeStore:
         return base
 
     def _localize_row(self, row: Dict[str, Any], lang: str) -> Dict[str, Any]:
-        normalized = self._normalize_language(lang)
+        normalized = self.normalize_language(lang)
         preferences = self._language_preference(normalized)
 
         def pick(field: str) -> Optional[str]:
@@ -280,7 +282,7 @@ class RecipeStore:
         return localized
 
     def _columns_for_search(self, lang: str) -> List[str]:
-        normalized = self._normalize_language(lang)
+        normalized = self.normalize_language(lang)
         preferences = self._language_preference(normalized)
         columns: List[str] = []
         for field in RECIPE_FIELDS:
@@ -295,7 +297,7 @@ class RecipeStore:
     def list_recipes(
         self, limit: int = 24, offset: int = 0, lang: str = DEFAULT_LANGUAGE
     ) -> Tuple[List[Dict[str, Any]], int]:
-        normalized = self._normalize_language(lang)
+        normalized = self.normalize_language(lang)
         total = len(self.df)
         subset = self.df.iloc[offset : offset + limit].copy()
         rows = subset.to_dict(orient="records")
@@ -306,7 +308,7 @@ class RecipeStore:
     def get_recipe(
         self, recipe_id: str, lang: str = DEFAULT_LANGUAGE
     ) -> Optional[Dict[str, Any]]:
-        normalized = self._normalize_language(lang)
+        normalized = self.normalize_language(lang)
         match = self.df[self.df["id"] == recipe_id]
         if match.empty:
             return None
@@ -317,10 +319,15 @@ class RecipeStore:
     def search(
         self, query: str, limit: int = 24, lang: str = DEFAULT_LANGUAGE
     ) -> List[Dict[str, Any]]:
-        normalized = self._normalize_language(lang)
-        results = self.table.search(query).limit(limit).to_pandas()
+        normalized = self.normalize_language(lang)
+        results = None
+        if self.table is not None:
+            try:
+                results = self.table.search(query).limit(limit).to_pandas()
+            except Exception as exc:  # pragma: no cover - optional path
+                warnings.warn(f"LanceDB search failed; falling back to pandas: {exc}")
 
-        if results is None or results.empty:
+        if results is None or getattr(results, "empty", True):
             # Simple fallback: case-insensitive containment
             columns = self._columns_for_search(normalized)
             if columns:
@@ -439,4 +446,4 @@ def handle_missing_file(_: FileNotFoundError):  # pragma: no cover - simple pass
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("gallery_backend.main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), reload=False)
