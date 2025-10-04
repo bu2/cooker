@@ -140,7 +140,7 @@
 
 @media (min-width: 600px) {
   .grid {
-    margin-top: 5rem;
+    margin-top: 7rem;
   }
 
   .grid > *:nth-of-type(even) {

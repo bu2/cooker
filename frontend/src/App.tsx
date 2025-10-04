@@ -10,7 +10,6 @@ import {
 } from "react";
 import {
   Recipe,
-  RecipeList,
   buildImageUrl,
   fetchRecipes,
   searchRecipes,
@@ -477,7 +476,6 @@ function RecipeContent({ recipe }: { recipe: Recipe }) {
 
 function App() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [total, setTotal] = useState<number>(0);
   const [query, setQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -545,9 +543,8 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const data: RecipeList = await fetchRecipes(24, 0, lang);
+      const data = await fetchRecipes(24, 0, lang);
       setRecipes(data.items);
-      setTotal(data.total);
       setActiveQuery(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load recipes";
@@ -563,7 +560,6 @@ function App() {
     try {
       const items = await searchRecipes(term, 60, lang);
       setRecipes(items);
-      setTotal(items.length);
       setActiveQuery(term);
       setURLParams(lang, term, null);
     } catch (err) {
@@ -800,12 +796,7 @@ function App() {
       {error && <div className="alert alert--error">{error}</div>}
       {loading && <div className="alert">Loading…</div>}
 
-      {!isStandalone && (
-        <div className="stats">
-          <span>{total.toLocaleString()} recipes</span>
-          {activeQuery && <span>Matching “{activeQuery}”</span>}
-        </div>
-      )}
+      {/* Stats bar removed */}
 
       {isStandalone ? (
         <section className="recipe-view">
