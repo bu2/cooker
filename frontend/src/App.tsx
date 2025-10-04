@@ -416,8 +416,8 @@ function RecipeCard({
         </div>
       )}
       <div className="card__body">
-        <h3>{recipe.title || recipe.id}</h3>
-        <p>{truncate(recipe.description ?? recipe.text)}</p>
+        <h3>{renderInline(recipe.title || recipe.id)}</h3>
+        <p>{renderInline(truncate(recipe.description ?? recipe.text))}</p>
         {recipe.n_tokens != null && (
           <span className="card__meta">Tokens: {recipe.n_tokens.toLocaleString()}</span>
         )}
@@ -460,7 +460,7 @@ function RecipeContent({ recipe }: { recipe: Recipe }) {
     <>
       <header className="modal__header">
         <div className="modal__header-info">
-          <h2 className="modal__title">{recipe.title || recipe.id}</h2>
+          <h2 className="modal__title">{renderInline(recipe.title || recipe.id)}</h2>
           {recipe.n_tokens != null && (
             <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>
           )}
