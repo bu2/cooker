@@ -1,12 +1,11 @@
-"""FastAPI backend for recipes with optional LanceDB search.
+"""FastAPI backend for recipes backed solely by LanceDB.
 
-This module keeps a single `RecipeStore` responsible for loading data,
-handling translations, and performing localized lookups.
+This module keeps a single `RecipeStore` responsible for loading data from
+LanceDB, deriving language preferences from available columns, and performing
+localized lookups and searches.
 """
 
 from __future__ import annotations
-
-import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -25,11 +24,9 @@ except Exception:  # pragma: no cover - optional dependency handled at runtime
     lancedb = None  # type: ignore
 
 
-DEFAULT_PARQUET = os.environ.get("RECIPES_PARQUET", "data/recipes.parquet")
 DEFAULT_LANCEDB_URI = os.environ.get("RECIPES_LANCEDB", "data/recipes.db")
 DEFAULT_TABLE = os.environ.get("RECIPES_TABLE", "recipes")
 DEFAULT_IMAGES_DIR = os.environ.get("RECIPES_IMAGES", "data/images")
-DEFAULT_TRANSLATIONS_DIR = os.environ.get("RECIPES_TRANSLATIONS", "data/translated_recipes")
 
 DEFAULT_LANGUAGE = "fr"
 RECIPE_FIELDS = ("title", "description", "text")
@@ -55,23 +52,57 @@ class LanguageListResponse(BaseModel):
 
 
 class RecipeStore:
-    """Loads recipes from parquet and optionally backs searches with LanceDB."""
+    """Loads recipes from LanceDB and serves localized results."""
 
     def __init__(
         self,
-        parquet_path: Path,
-        lancedb_uri: Optional[Path] = None,
+        lancedb_uri: Path,
         table_name: str = "recipes",
         images_dir: Optional[Path] = None,
-        translations_dir: Optional[Path] = None,
     ) -> None:
-        if not parquet_path.exists():
-            raise FileNotFoundError(f"Parquet file not found: {parquet_path}")
+        if lancedb is None:
+            raise RuntimeError("LanceDB is required but not available.")
+
+        if not lancedb_uri.exists():
+            raise FileNotFoundError(f"LanceDB path not found: {lancedb_uri}")
 
         self.default_language = DEFAULT_LANGUAGE
-        self.translations_dir = translations_dir
 
-        self.df = pd.read_parquet(parquet_path)
+        # Connect to LanceDB and open the recipes table
+        try:
+            db = lancedb.connect(str(lancedb_uri))
+            self.table = db.open_table(table_name)
+        except Exception as exc:
+            raise FileNotFoundError(
+                f"Unable to open LanceDB table '{table_name}': {exc}"
+            )
+
+        # Load full table into a DataFrame for listing/get operations
+        df = None
+        try:
+            if hasattr(self.table, "to_pandas"):
+                df = self.table.to_pandas()  # type: ignore[attr-defined]
+        except Exception:
+            df = None
+        if df is None:
+            try:
+                if hasattr(self.table, "to_arrow"):
+                    arr = self.table.to_arrow()  # type: ignore[attr-defined]
+                    df = arr.to_pandas()  # type: ignore[assignment]
+            except Exception:
+                df = None
+        if df is None:
+            try:
+                if hasattr(self.table, "scanner"):
+                    scanner = self.table.scanner()  # type: ignore[attr-defined]
+                    arr = scanner.to_table()
+                    df = arr.to_pandas()
+            except Exception:
+                df = None
+        if df is None:
+            raise RuntimeError("Unable to load data from LanceDB into pandas.")
+
+        self.df = df
         if "id" not in self.df.columns:
             # Fall back to filename stem or index if missing
             if "path" in self.df.columns:
@@ -81,10 +112,6 @@ class RecipeStore:
         # Normalise to string ids and drop duplicates
         self.df["id"] = self.df["id"].astype(str)
         self.df = self.df.drop_duplicates(subset=["id"]).reset_index(drop=True)
-
-        translation_languages: Set[str] = set()
-        if translations_dir is not None and translations_dir.exists():
-            translation_languages = self._apply_translations(translations_dir)
 
         language_columns = [
             col for col in self.df.columns if self._is_language_column(col)
@@ -107,66 +134,12 @@ class RecipeStore:
         column_languages = self._collect_languages_from_columns(language_columns)
         self.supported_languages: Set[str] = set(column_languages)
         self.supported_languages.add(self.default_language)
-        self.supported_languages.update(translation_languages)
         if not self.supported_languages:
             self.supported_languages.add(self.default_language)
 
         self.images_dir = images_dir
-        self.table = None
-        if lancedb and lancedb_uri is not None:
-            try:
-                db = lancedb.connect(str(lancedb_uri))
-                self.table = db.open_table(table_name)
-            except Exception as exc:  # pragma: no cover - optional path
-                warnings.warn(
-                    f"Unable to open LanceDB table '{table_name}': {exc}"
-                )
-                self.table = None
 
     # Helper -----------------------------------------------------------------
-    def _apply_translations(self, translations_dir: Path) -> Set[str]:
-        languages: Set[str] = set()
-        translations: Dict[str, Dict[str, str]] = {}
-
-        for path in sorted(translations_dir.glob("*.json")):
-            if not path.is_file():
-                continue
-            try:
-                with path.open("r", encoding="utf-8") as handle:
-                    payload = json.load(handle)
-            except Exception as exc:  # pragma: no cover - best-effort logging
-                print(f"Warning: Unable to load translations from {path}: {exc}")
-                continue
-
-            if not isinstance(payload, dict):
-                continue
-
-            recipe_id = path.stem
-            if not recipe_id:
-                continue
-
-            record = translations.setdefault(recipe_id, {})
-            for key, value in payload.items():
-                if not isinstance(value, str):
-                    continue
-                record[key] = value
-                lang = self._extract_language_from_column(key)
-                if lang:
-                    languages.add(lang)
-
-        if not translations:
-            return languages
-
-        df = self.df.set_index("id", drop=False)
-        for recipe_id, fields in translations.items():
-            if recipe_id not in df.index:
-                # Skip translations for unknown recipes
-                continue
-            for column, value in fields.items():
-                df.loc[recipe_id, column] = value
-        self.df = df.reset_index(drop=True)
-
-        return languages
 
     @staticmethod
     def _extract_language_from_column(column: str) -> Optional[str]:
@@ -348,17 +321,13 @@ class RecipeStore:
 
 def get_store() -> RecipeStore:
     if not hasattr(get_store, "_instance"):
-        parquet_path = Path(DEFAULT_PARQUET)
-        lancedb_uri = Path(DEFAULT_LANCEDB_URI) if DEFAULT_LANCEDB_URI else None
+        lancedb_uri = Path(DEFAULT_LANCEDB_URI)
         images_dir_path = Path(DEFAULT_IMAGES_DIR)
         images_dir = images_dir_path if images_dir_path.exists() else None
-        translations_dir = Path(DEFAULT_TRANSLATIONS_DIR) if DEFAULT_TRANSLATIONS_DIR else None
         get_store._instance = RecipeStore(
-            parquet_path=parquet_path,
             lancedb_uri=lancedb_uri,
             table_name=DEFAULT_TABLE,
             images_dir=images_dir,
-            translations_dir=translations_dir,
         )
     return get_store._instance  # type: ignore[attr-defined]
 
