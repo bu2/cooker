@@ -19,6 +19,7 @@ import {
   DEFAULT_LANGUAGE,
 } from "./api";
 import "./App.css";
+import { t } from "./i18n";
 
 const DEFAULT_FLAG = "🌐";
 
@@ -216,8 +217,8 @@ function renderInline(text: string): ReactNode[] {
 
 
 function buildRecipePageUrl(id: string, lang: LanguageCode): string {
-  try {
-    const url = new URL(window.location.href);
+    try {
+      const url = new URL(window.location.href);
     url.searchParams.set("lang", normalizeLanguageCode(lang));
     url.searchParams.set("id", id);
     // Keep permalinks clean: drop transient search query
@@ -386,10 +387,12 @@ function RecipeCard({
   recipe,
   onSelect,
   isMobile,
+  language,
 }: {
   recipe: Recipe;
   onSelect: (id: string) => void;
   isMobile: boolean;
+  language: LanguageCode;
 }) {
   const imageUrl = buildImageUrl(recipe.image_url);
   const fallbackColor = PLACEHOLDER_COLORS[
@@ -419,14 +422,14 @@ function RecipeCard({
         <h3>{renderInline(recipe.title || recipe.id)}</h3>
         <p>{renderInline(truncate(recipe.description ?? recipe.text))}</p>
         {recipe.n_tokens != null && (
-          <span className="card__meta">Tokens: {recipe.n_tokens.toLocaleString()}</span>
+          <span className="card__meta">{t(language, "tokens_label")}: {recipe.n_tokens.toLocaleString()}</span>
         )}
       </div>
     </article>
   );
 }
 
-function RecipeModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void }) {
+function RecipeModal({ recipe, onClose, language }: { recipe: Recipe; onClose: () => void; language: LanguageCode }) {
   const imageUrl = buildImageUrl(recipe.image_url);
   return (
     <div className="modal__backdrop" onClick={onClose}>
@@ -440,21 +443,21 @@ function RecipeModal({ recipe, onClose }: { recipe: Recipe; onClose: () => void 
             )}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Open recipe in a new tab"
+            aria-label={t(language, "open_recipe_in_new_tab")}
           >
-            Open in new tab ↗
+            {t(language, "open_in_new_tab")}
         </a>
         <button className="modal__close" onClick={onClose}>
           ×
         </button>
         </div>
-        <RecipeContent recipe={recipe} />
+        <RecipeContent recipe={recipe} language={language} />
       </div>
     </div>
   );
 }
 
-function RecipeContent({ recipe }: { recipe: Recipe }) {
+function RecipeContent({ recipe, language }: { recipe: Recipe; language: LanguageCode }) {
   const imageUrl = buildImageUrl(recipe.image_url);
   return (
     <>
@@ -462,7 +465,7 @@ function RecipeContent({ recipe }: { recipe: Recipe }) {
         <div className="modal__header-info">
           <h2 className="modal__title">{renderInline(recipe.title || recipe.id)}</h2>
           {recipe.n_tokens != null && (
-            <p className="modal__tokens">Tokens: {recipe.n_tokens.toLocaleString()}</p>
+            <p className="modal__tokens">{t(language, "tokens_label")}: {recipe.n_tokens.toLocaleString()}</p>
           )}
         </div>
       </header>
@@ -547,7 +550,7 @@ function App() {
       setRecipes(data.items);
       setActiveQuery(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load recipes";
+      const message = err instanceof Error ? err.message : t(lang, "error_failed_load_recipes");
       setError(message);
     } finally {
       setLoading(false);
@@ -563,7 +566,7 @@ function App() {
       setActiveQuery(term);
       setURLParams(lang, term, null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Search failed";
+      const message = err instanceof Error ? err.message : t(lang, "error_search_failed");
       setError(message);
     } finally {
       setLoading(false);
@@ -583,7 +586,7 @@ function App() {
           setSelected(updated);
           setURLParams(nextLanguage, activeQueryRef.current, selectedId);
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Failed to load recipe";
+          const message = err instanceof Error ? err.message : t(nextLanguage, "error_failed_load_recipe");
           setError(message);
         } finally {
           setLoading(false);
@@ -640,7 +643,7 @@ function App() {
           const initial = await fetchRecipeById(urlId, urlLang);
           setSelected(initial);
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Failed to load recipe";
+          const message = err instanceof Error ? err.message : t(urlLang, "error_failed_load_recipe");
           setError(message);
         } finally {
           setLoading(false);
@@ -671,7 +674,7 @@ function App() {
         if (cancelled) {
           return;
         }
-        const message = err instanceof Error ? err.message : "Failed to load languages";
+        const message = err instanceof Error ? err.message : t(language, "error_failed_load_languages");
         setError(message);
       }
     };
@@ -700,7 +703,7 @@ function App() {
       // On desktop gallery selection, flag as a preview (modal state)
       setURLParams(language, activeQueryRef.current, id, true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load recipe";
+      const message = err instanceof Error ? err.message : t(language, "error_failed_load_recipe");
       setError(message);
     }
   };
@@ -759,19 +762,17 @@ function App() {
         <div className="app__header-top">
           <div>
             <h1>La Tambouille</h1>
-            <p className="app__subtitle">
-              La cuisine française traditionnelle dans votre assiette.
-            </p>
+            <p className="app__subtitle">{t(language, "app_subtitle")}</p>
           </div>
           <div className="app__actions">
             {!isStandalone && (
               <form className="search" onSubmit={handleSearch}>
                 <input
                   type="search"
-                  placeholder="Rechercher..."
+                  placeholder={t(language, "search_placeholder")}
                   value={query}
                   onChange={handleSearchChange}
-                  aria-label="Search recipes"
+                  aria-label={t(language, "aria_search_recipes")}
                 />
               </form>
             )}
@@ -794,22 +795,22 @@ function App() {
       </header>
 
       {error && <div className="alert alert--error">{error}</div>}
-      {loading && <div className="alert">Loading…</div>}
+      {loading && <div className="alert">{t(language, "loading")}</div>}
 
       {/* Stats bar removed */}
 
       {isStandalone ? (
         <section className="recipe-view">
-          {selected && <RecipeContent recipe={selected} />}
+          {selected && <RecipeContent recipe={selected} language={language} />}
         </section>
       ) : (
         <>
           <section className="grid">
             {recipes.map((recipe) => (
-              <RecipeCard key={recipe.id} recipe={recipe} onSelect={handleSelect} isMobile={isMobile} />
+              <RecipeCard key={recipe.id} recipe={recipe} onSelect={handleSelect} isMobile={isMobile} language={language} />
             ))}
           </section>
-          {selected && <RecipeModal recipe={selected} onClose={clearSelection} />}
+          {selected && <RecipeModal recipe={selected} onClose={clearSelection} language={language} />}
         </>
       )}
     </div>
