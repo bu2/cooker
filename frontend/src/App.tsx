@@ -20,6 +20,7 @@ import {
 } from "./api";
 import "./App.css";
 import { t } from "./i18n";
+import logo from "./assets/latambouille.png";
 
 const DEFAULT_FLAG = "🌐";
 
@@ -491,6 +492,7 @@ function App() {
   const languageRef = useRef<LanguageCode>(language);
   const bootstrappedRef = useRef(false);
   const isMobile = useIsMobile();
+  const initialTitleRef = useRef<string | null>(null);
 
   const setURLParams = useCallback(
     (
@@ -755,12 +757,34 @@ function App() {
     };
   }, [selected, isStandalone]);
 
+  // Update document title when previewing or viewing a full recipe page
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (initialTitleRef.current == null) {
+      initialTitleRef.current = document.title || "LaTambouille.fr";
+    }
+    if (selected) {
+      const name = selected.title || selected.id;
+      const base = initialTitleRef.current || "LaTambouille.fr";
+      document.title = `${name} — ${base}`;
+    } else {
+      document.title = initialTitleRef.current || document.title;
+    }
+  }, [selected]);
+
   return (
     <div className="app">
       <header className="app__header">
         <div className="app__header-top">
           <div>
-            <h1>La Tambouille</h1>
+            <h1>
+              <img
+                src={logo}
+                alt="La Tambouille"
+                className="app__logo"
+                style={isMobile ? { margin: "0 auto" } : undefined}
+              />
+            </h1>
             <p className="app__subtitle">{t(language, "app_subtitle")}</p>
           </div>
           <div className="app__actions">

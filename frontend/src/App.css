@@ -83,6 +83,11 @@
   letter-spacing: -0.02em;
 }
 
+.app__logo {
+  display: block;
+  width: 250px;
+}
+
 .app__subtitle {
   margin: 0.25rem 0 0;
   color: #64748b;
