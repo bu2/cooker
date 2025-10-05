@@ -21,14 +21,17 @@ interface LanguageListResponse {
   languages: string[];
 }
 
-const DEFAULT_BASE = "http://192.168.1.13:8000";
-
 function getBaseUrl(): string {
-  const fromEnv = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  if (!fromEnv) {
-    return DEFAULT_BASE;
+  const fromEnv = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (fromEnv) {
+    return fromEnv.replace(/\/$/, "");
   }
-  return fromEnv.replace(/\/$/, "");
+  // In dev, rely on Vite proxy (see vite.config.ts)
+  if (import.meta.env.DEV) {
+    return "/api";
+  }
+  // In production, default to same-origin (behind a reverse proxy)
+  return "";
 }
 
 const API_BASE = getBaseUrl();

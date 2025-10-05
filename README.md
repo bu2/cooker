@@ -50,7 +50,9 @@ Note: Use `dot` when your embeddings are unit‑normalized (Step 2 normalizes by
   - `cd frontend`
   - `npm install`
   - Start dev server: `npm run dev` (default http://localhost:5173)
-  - Configure backend URL via `.env` (e.g., `VITE_API_BASE_URL=http://localhost:8000`).
+  - API base URL:
+    - Dev: no config needed; Vite proxies `/api` and `/images` to `http://localhost:8000`.
+    - Prod: set `VITE_API_BASE_URL` in `.env` or your hosting env (e.g., `VITE_API_BASE_URL=https://api.example.com`). See `frontend/.env.example`.
 - Features: list recipes, search via LanceDB full-text index, view full recipe & image in modal.
 - Build for production: `npm run build` → static assets in `frontend/dist/`.
 
