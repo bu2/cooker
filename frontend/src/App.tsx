@@ -488,6 +488,7 @@ function App() {
   const [availableLanguages, setAvailableLanguages] = useState<LanguageCode[]>([DEFAULT_LANGUAGE]);
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
   const activeQueryRef = useRef<string | null>(null);
+  const languageRef = useRef<LanguageCode>(language);
   const bootstrappedRef = useRef(false);
   const isMobile = useIsMobile();
 
@@ -541,6 +542,7 @@ function App() {
   );
 
   activeQueryRef.current = activeQuery;
+  languageRef.current = language;
 
   const loadRecipesForLanguage = useCallback(async (lang: LanguageCode) => {
     setLoading(true);
@@ -660,21 +662,18 @@ function App() {
     const loadLanguages = async () => {
       try {
         const langs = await fetchLanguages();
-        if (cancelled || !langs.length) {
-          return;
-        }
+        if (cancelled || !langs.length) return;
         setAvailableLanguages(langs);
-        if (!langs.includes(language)) {
+        const currentLang = languageRef.current;
+        if (!langs.includes(currentLang)) {
           const nextLanguage = langs[0];
           if (nextLanguage) {
             await applyLanguageChange(nextLanguage);
           }
         }
       } catch (err) {
-        if (cancelled) {
-          return;
-        }
-        const message = err instanceof Error ? err.message : t(language, "error_failed_load_languages");
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : t(languageRef.current, "error_failed_load_languages");
         setError(message);
       }
     };
@@ -684,7 +683,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [applyLanguageChange, language]);
+  }, []);
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

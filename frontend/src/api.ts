@@ -36,6 +36,10 @@ function getBaseUrl(): string {
 
 const API_BASE = getBaseUrl();
 
+// Simple in-memory cache for languages to avoid redundant network calls
+let __languagesCache: LanguageCode[] | null = null;
+let __languagesPromise: Promise<LanguageCode[]> | null = null;
+
 async function handleResponse<T>(resp: Response): Promise<T> {
   if (!resp.ok) {
     const msg = await resp.text();
@@ -86,20 +90,38 @@ export async function fetchRecipeById(
 }
 
 export async function fetchLanguages(): Promise<LanguageCode[]> {
-  const resp = await fetch(`${API_BASE}/languages`);
-  const data = await handleResponse<LanguageListResponse>(resp);
-  if (!data.languages || data.languages.length === 0) {
-    return [DEFAULT_LANGUAGE];
+  if (__languagesCache) {
+    return __languagesCache;
   }
-  const seen = new Set<string>();
-  const normalized = data.languages
-    .map((code) => code.trim())
-    .filter((code) => {
-      if (!code) return false;
-      const lower = code.toLowerCase();
-      if (seen.has(lower)) return false;
-      seen.add(lower);
-      return true;
+  if (__languagesPromise) {
+    return __languagesPromise;
+  }
+  __languagesPromise = (async () => {
+    const resp = await fetch(`${API_BASE}/languages`);
+    const data = await handleResponse<LanguageListResponse>(resp);
+    if (!data.languages || data.languages.length === 0) {
+      return [DEFAULT_LANGUAGE];
+    }
+    const seen = new Set<string>();
+    const normalized = data.languages
+      .map((code) => code.trim())
+      .filter((code) => {
+        if (!code) return false;
+        const lower = code.toLowerCase();
+        if (seen.has(lower)) return false;
+        seen.add(lower);
+        return true;
+      });
+    return normalized.length ? normalized : [DEFAULT_LANGUAGE];
+  })()
+    .then((result) => {
+      __languagesCache = result;
+      __languagesPromise = null;
+      return result;
+    })
+    .catch((err) => {
+      __languagesPromise = null;
+      throw err;
     });
-  return normalized.length ? normalized : [DEFAULT_LANGUAGE];
+  return __languagesPromise;
 }
