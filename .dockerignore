@@ -1,0 +1,23 @@
+# Reduce Docker build context size and avoid copying local dev artifacts
+.git
+.gitignore
+.DS_Store
+
+# Large datasets and generated assets not needed for building the image
+# Keep empty directories with a .keep file so Dockerfile COPY still works
+data/**
+!data/.keep
+recipes.db/**
+!recipes.db/.keep
+projector_*.tsv
+
+# Local build outputs and caches
+frontend/node_modules/
+frontend/dist/
+**/__pycache__/
+**/*.pyc
+
+# Editor/OS cruft
+.vscode/
+.idea/
+Thumbs.db

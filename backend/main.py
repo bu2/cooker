@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import warnings
 
 import pandas as pd
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -408,7 +408,7 @@ def search_recipes(
 
 
 @app.exception_handler(FileNotFoundError)
-def handle_missing_file(_: FileNotFoundError):  # pragma: no cover - simple passthrough
+def handle_missing_file(_request: Request, _exc: FileNotFoundError):  # pragma: no cover - simple passthrough
     return JSONResponse(status_code=500, content={"detail": "Required dataset not found."})
 
 
