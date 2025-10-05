@@ -66,3 +66,21 @@ Note: Use `dot` when your embeddings are unit‑normalized (Step 2 normalizes by
 - Missing packages: reinstall with `pip install -U ollama pandas sentence-transformers lancedb pyarrow`.
 - Ollama model: set `OLLAMA_MODEL` to a model you have locally, e.g. ``export OLLAMA_MODEL=mistral``.
 - First embedding run may be slow due to model download.
+
+**Deploy to Scaleway**
+- Prerequisites:
+  - A Scaleway Ubuntu Noble instance (Amsterdam 1) reachable via SSH.
+  - A Scaleway Object Storage bucket in region `nl-ams` (or adjust).
+  - Local Docker installed. You do not need Node or AWS CLI locally; the script uses Dockerized builders/tools.
+- Steps:
+  - Copy `.env.scaleway.example` to `.env.scaleway` and fill in required values:
+    - `SCW_SSH_HOST`, `SCW_S3_BUCKET`, `PUBLIC_API_BASE_URL`, and S3 credentials (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`).
+    - Optional: set `SYNC_IMAGES=true` to upload `data/images` to the instance.
+  - Run `bash scripts/deploy_scaleway.sh`.
+- What it does:
+  - Builds the Docker image locally (backend + Nginx) and extracts the Vite `dist`.
+  - Uploads the frontend static site to your Scaleway Object Storage bucket with proper cache headers.
+  - Loads the Docker image onto the instance and runs it on port 80, mounting `recipes.db` and `data/images` from `/opt/cooker`.
+- After deploy:
+  - Frontend (Object Storage): `https://<bucket>.s3.<region>.scw.cloud/index.html` (or the website endpoint if enabled).
+  - API base URL: `PUBLIC_API_BASE_URL` from your `.env.scaleway` (e.g., `https://your-instance`), serving `/languages`, `/recipes`, `/search`, and `/images`.

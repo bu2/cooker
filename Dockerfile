@@ -9,6 +9,9 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 # Build static assets
+# Allow overriding API base at build time for static hosting
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 COPY frontend/ ./
 RUN npm run build
 
@@ -56,4 +59,3 @@ EXPOSE 80
 
 ENTRYPOINT ["/usr/bin/tini","--"]
 CMD ["/entrypoint.sh"]
-
