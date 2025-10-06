@@ -3,6 +3,7 @@ data/
 frontend/dist/
 frontend/node_modules/
 recipes.db/
+scripts/.deploy_tmp/
 
 .DS_Store
 images*.tar.gz

@@ -27,6 +27,9 @@ except Exception:  # pragma: no cover - optional dependency handled at runtime
 DEFAULT_LANCEDB_URI = os.environ.get("RECIPES_LANCEDB", "data/recipes.db")
 DEFAULT_TABLE = os.environ.get("RECIPES_TABLE", "recipes")
 DEFAULT_IMAGES_DIR = os.environ.get("RECIPES_IMAGES", "data/images")
+# When set, backend emits absolute image URLs pointing to Object Storage
+# e.g. "https://latambouille.fr" and the code will append "/images/<id>.jpg".
+PUBLIC_IMAGES_BASE_URL = os.environ.get("PUBLIC_IMAGES_BASE_URL", "").rstrip("/")
 
 DEFAULT_LANGUAGE = "fr"
 RECIPE_FIELDS = ("title", "description", "text")
@@ -138,6 +141,8 @@ class RecipeStore:
             self.supported_languages.add(self.default_language)
 
         self.images_dir = images_dir
+        # If configured, construct absolute image URLs using this base
+        self.images_base_url: Optional[str] = PUBLIC_IMAGES_BASE_URL or None
 
     # Helper -----------------------------------------------------------------
 
@@ -190,18 +195,33 @@ class RecipeStore:
         return self._unique_preserve_order(filtered)
 
     def _attach_image_url(self, row: Dict[str, Any]) -> Dict[str, Any]:
-        if not self.images_dir:
-            row["image_url"] = None
-            return row
         rid = row.get("id")
         if not rid:
             row["image_url"] = None
             return row
-        for ext in (".png", ".jpg", ".jpeg"):
-            candidate = self.images_dir / f"{rid}{ext}"
-            if candidate.exists():
-                row["image_url"] = f"/images/{candidate.name}"
-                break
+
+        # If a public images base URL is configured, emit absolute URLs
+        # and avoid depending on local filesystem presence.
+        if self.images_base_url:
+            chosen_ext = ".jpg"
+            if self.images_dir:
+                for ext in (".png", ".jpg", ".jpeg"):
+                    candidate = self.images_dir / f"{rid}{ext}"
+                    if candidate.exists():
+                        chosen_ext = ext
+                        break
+            row["image_url"] = f"{self.images_base_url}/images/{rid}{chosen_ext}"
+            return row
+
+        # Fallback to serving from local container if available
+        if self.images_dir:
+            for ext in (".png", ".jpg", ".jpeg"):
+                candidate = self.images_dir / f"{rid}{ext}"
+                if candidate.exists():
+                    row["image_url"] = f"/images/{candidate.name}"
+                    break
+            else:
+                row["image_url"] = None
         else:
             row["image_url"] = None
         return row

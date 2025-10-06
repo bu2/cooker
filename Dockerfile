@@ -57,5 +57,8 @@ ENV PORT=8000 \
 
 EXPOSE 80
 
+# Lightweight healthcheck through Nginx → FastAPI
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD python3 -c "import sys,urllib.request; r=urllib.request.urlopen('http://127.0.0.1/health', timeout=3); sys.exit(0 if getattr(r,'status',200)==200 else 1)"
+
 ENTRYPOINT ["/usr/bin/tini","--"]
 CMD ["/entrypoint.sh"]

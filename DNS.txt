@@ -1,0 +1,6 @@
+; Website (via Scaleway CDN)
+@   10800 IN A 217.70.184.55 ; Gandi Web Forwarding
+www 10800 IN CNAME 4dc47607-a28b-4e52-86ba-e31be5acb9d7.svc.edge.scw.cloud.
+
+; API
+api 10800 IN A 51.15.119.6

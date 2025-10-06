@@ -1,0 +1,22 @@
+#+ Local HTTPS reverse proxy for Cooker
+#+ - Serves HTTPS on container :443 (host mapped to 8443)
+#+ - Proxies to app exposed on host :8080
+#+ - Uses Caddy internal CA (self-signed for local testing)
+
+{
+	admin off
+}
+
+localhost, 127.0.0.1 {
+	encode zstd gzip
+	tls internal
+
+	reverse_proxy host.docker.internal:8080
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer-when-downgrade"
+		X-Frame-Options "SAMEORIGIN"
+	}
+}
