@@ -778,12 +778,14 @@ function App() {
         <div className="app__header-top">
           <div>
             <h1>
-              <img
-                src={logo}
-                alt="La Tambouille"
-                className="app__logo"
-                style={isMobile ? { margin: "0 auto" } : undefined}
-              />
+              <a href="/">
+                <img
+                  src={logo}
+                  alt="La Tambouille"
+                  className="app__logo"
+                  style={isMobile ? { margin: "0 auto" } : undefined}
+                />
+              </a>
             </h1>
             <p className="app__subtitle">{t(language, "app_subtitle")}</p>
           </div>
