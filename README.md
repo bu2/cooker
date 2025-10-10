@@ -86,7 +86,11 @@ Note: Use `dot` when your embeddings are unit‑normalized (Step 2 normalizes by
 - Prerequisites:
   - A Scaleway Ubuntu Noble instance (Amsterdam 1) reachable via SSH.
   - A Scaleway Object Storage bucket in region `nl-ams` (or adjust).
-  - Local Docker installed. You do not need Node or AWS CLI locally; the script uses Dockerized builders/tools.
+  - Local Docker installed with Buildx support. You do not need Node or AWS CLI locally; the script uses Dockerized builders/tools.
+  - Ensure you have built your dataset first and have `data/recipes.db/` present (see generation and indexing steps above).
+- Quick redeploy:
+  - `bash scripts/deploy_scaleway.sh`
+
 - Steps:
   - Copy `.env.scaleway.example` to `.env.scaleway` and fill in required values:
     - Required: `SCW_SSH_HOST`, `SCW_S3_BUCKET`, `PUBLIC_API_BASE_URL`, S3 credentials (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`).
@@ -104,6 +108,16 @@ Note: Use `dot` when your embeddings are unit‑normalized (Step 2 normalizes by
   - API base URL: `PUBLIC_API_BASE_URL` from `.env.scaleway` (e.g., `https://api.latambouille.fr`).
   - Images: public URLs under `${PUBLIC_IMAGES_BASE_URL}/images/<id>.jpg` (or `.png`).
 
+**Verification & Logs**
+- API health: `curl -s https://api.<your-domain>/health`
+- Languages: `curl -s https://api.<your-domain>/languages`
+- Static index: `curl -sSI https://<bucket>.s3.<region>.scw.cloud/index.html`
+- Tail logs on instance:
+  - `ssh ubuntu@<SCW_SSH_HOST>`
+  - `docker ps`
+  - `docker logs -f cooker`
+  - `docker logs -f caddy`
+
 **Scaleway CDN + DNS (recommended)**
 - In Scaleway Console:
   - Create a CDN service with origin = your bucket (HTTPS origin).
@@ -114,6 +128,9 @@ Note: Use `dot` when your embeddings are unit‑normalized (Step 2 normalizes by
   - `www`: CNAME to the CDN hostname.
   - `api`: A record to your instance IP (e.g., `51.15.119.6`).
 - Set `PUBLIC_IMAGES_BASE_URL=https://www.latambouille.fr` in `.env.scaleway` and redeploy.
+
+**Security Note**
+- Do not commit `.env.scaleway` to source control. Use `.env.scaleway.example` as a template and keep real credentials local or in your CI/CD secrets.
 
 **Verification**
 - API: `curl -s https://api.<your-domain>/health` → `{"status":"ok"}`

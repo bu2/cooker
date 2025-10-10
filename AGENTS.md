@@ -34,3 +34,14 @@
 ## Agent‑Specific Instructions
 - Prefer minimal diffs; avoid renames/restructures without justification. Keep Docker/nginx aligned with backend routes.
 - Validate changes via health check and a sample search: `curl 'http://localhost:8000/search?q=chocolate'`.
+
+## Scaleway Deploy (for agents)
+- Script: `scripts/deploy_scaleway.sh` builds the Docker image, extracts the frontend, syncs to Scaleway Object Storage, then updates containers on the instance (app + optional Caddy TLS).
+- Env file: copy `.env.scaleway.example` to `.env.scaleway` locally and populate. Do NOT commit `.env.scaleway`.
+- Quick redeploy: run `bash scripts/deploy_scaleway.sh` from repo root.
+- Verification:
+  - API: `curl -s https://api.<domain>/health` and `/languages`.
+  - Static: `curl -sSI https://<bucket>.s3.<region>.scw.cloud/index.html`.
+- Remote logs (via SSH):
+  - `ssh ubuntu@<SCW_SSH_HOST>` then `docker ps`, `docker logs -f cooker`, `docker logs -f caddy`.
+- Requirements: Local Docker with Buildx; dataset present at `data/recipes.db/` or the backend may fail.
