@@ -209,6 +209,8 @@ sudo docker rm -f cooker >/dev/null 2>&1 || true
 sudo docker run -d --name cooker \
   --restart unless-stopped \
   --network cooker_net \
+  --log-driver=local \
+  --log-opt max-size=10m \
   -e PORT=8000 \
   -e RECIPES_LANCEDB=/app/recipes.db \
   -e RECIPES_TABLE=recipes \
@@ -245,6 +247,8 @@ CADDY
   sudo docker run -d --name caddy \
     --restart unless-stopped \
     --network cooker_net \
+    --log-driver=local \
+    --log-opt max-size=10m \
     -p 80:80 -p 443:443 \
     -v caddy_data:/data \
     -v caddy_config:/config \
@@ -261,6 +265,8 @@ else
   sudo docker rm -f cooker >/dev/null 2>&1 || true
   sudo docker run -d --name cooker \
     --restart unless-stopped \
+    --log-driver=local \
+    --log-opt max-size=10m \
     -p 80:80 \
     -e PORT=8000 \
     -e RECIPES_LANCEDB=/app/recipes.db \
